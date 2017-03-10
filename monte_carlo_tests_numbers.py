@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+'''Module used to run tests on Monte Carlo methods using decision trees of a single level/node.
+'''
+
 
 import datetime
 import itertools

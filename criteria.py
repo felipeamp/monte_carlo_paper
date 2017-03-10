@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+'''Module containing all criteria available for tests.
+'''
 
 import abc
 import itertools

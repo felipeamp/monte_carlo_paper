@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+'''Module contains Cholesky decomposition for singular matrices (Higham method).
+'''
 
 # import ctypes
 
@@ -14,6 +16,8 @@ _EPS = _FINFO.eps
 
 
 def is_invertible(A):
+    '''Tests if the matrix is non-singular.
+    '''
     return A.shape[0] == A.shape[1] and np.linalg.matrix_rank(A) == A.shape[0]
 
 

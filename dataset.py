@@ -293,8 +293,18 @@ class Dataset(object):
 
     def load_test_set_from_csv(self, test_dataset_csv_filepath, key_attrib_index,
                                class_attrib_index, split_char, missing_value_string):
+        """Loads the CSV and initialize auxiliary data.
+
+        Args:
+            test_dataset_csv_filepath (str): path to the test dataset.
+            key_attrib_index (int): column index of the samples' keys on the csv.
+            class_attrib_index (int): column index of the samples' classes on the csv.
+            split_char (str): char used to split columns in the csv.
+            missing_value_string (str): string used to indicate that a sample does not have a value.
+        """
         #TESTED!
-        def is_header_match(train_attrib_names, test_attrib_names):
+        def _is_header_match(train_attrib_names, test_attrib_names):
+            """Tests wether both headers are the same (up to lower/uppercase)."""
             #TESTED!
             if len(train_attrib_names) != len(test_attrib_names):
                 return False
@@ -337,7 +347,7 @@ class Dataset(object):
                 samples_counter += 1
                 if samples_counter == 0:
                     # header
-                    if not is_header_match(self.attrib_names, line_list):
+                    if not _is_header_match(self.attrib_names, line_list):
                         print('Test dataset header is not equal to train dataset header.')
                         sys.exit(1)
                     continue

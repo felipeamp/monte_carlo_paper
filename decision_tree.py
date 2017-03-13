@@ -25,12 +25,28 @@ class DecisionTree(object):
 
     Args:
         criterion (Criterion): criterion which will be used to generate the tree nodes/splits.
+        is_monte_carlo_criterion (bool, optional): indicates if the splitting criterion uses our
+            Monte Carlo framework. Defaults to `False`.
+        upper_p_value_threshold (float, optional): the p-value-upper-threshold for our Monte Carlo
+            framework. If an attribute has a p-value above this threshold, it will be rejected with
+            probability `prob_monte_carlo`. Defaults to `None`.
+        lower_p_value_threshold (float, optional): the p-value-lower-threshold for our Monte Carlo
+            framework. If an attribute has a p-value below this threshold, it will be accepted with
+            probability `prob_monte_carlo`. Defaults to `None`.
+        prob_monte_carlo (float, optional): the probability of accepting an attribute with p-value
+            smaller than `lower_p_value_threshold` and rejecting an attribute with p-value greater
+            than `upper_p_value_threshold` for our Monte Carlo framework. Defaults to `None`.
     """
-    def __init__(self, criterion):
+    def __init__(self, criterion, is_monte_carlo_criterion=False, upper_p_value_threshold=None,
+        lower_p_value_threshold=None, prob_monte_carlo=None):
         #TESTED!
         self._criterion = criterion
         self._dataset = None
         self._root_node = None
+        self._is_monte_carlo_criterion = is_monte_carlo_criterion
+        self._upper_p_value_threshold = upper_p_value_threshold
+        self._lower_p_value_threshold = lower_p_value_threshold
+        self._prob_monte_carlo = prob_monte_carlo
 
     def get_root_node(self):
         """Returns the TreeNode at the root of the tree. Might be None.
@@ -156,7 +172,11 @@ class DecisionTree(object):
                                    dataset.valid_nominal_attribute[:],
                                    max_depth,
                                    min_samples_per_node,
-                                   use_stop_conditions)
+                                   use_stop_conditions,
+                                   is_monte_carlo_criterion=self._is_monte_carlo_criterion,
+                                   upper_p_value_threshold=self._upper_p_value_threshold,
+                                   lower_p_value_threshold=self._lower_p_value_threshold,
+                                   prob_monte_carlo=self._prob_monte_carlo)
         self._root_node.create_subtree(self._criterion, max_p_value)
         print('Done!')
 
@@ -633,6 +653,17 @@ class TreeNode(object):
             an attribute is considered invalid for the above reasons, this information will be
             passed to every child node of the current TreeNode. Note that numeric attributes are
             never tested in this way. Defaults to `False`.
+        is_monte_carlo_criterion (bool, optional): indicates if the splitting criterion uses our
+            Monte Carlo framework. Defaults to `False`.
+        upper_p_value_threshold (float, optional): the p-value-upper-threshold for our Monte Carlo
+            framework. If an attribute has a p-value above this threshold, it will be rejected with
+            probability `prob_monte_carlo`. Defaults to `None`.
+        lower_p_value_threshold (float, optional): the p-value-lower-threshold for our Monte Carlo
+            framework. If an attribute has a p-value below this threshold, it will be accepted with
+            probability `prob_monte_carlo`. Defaults to `None`.
+        prob_monte_carlo (float, optional): the probability of accepting an attribute with p-value
+            smaller than `lower_p_value_threshold` and rejecting an attribute with p-value greater
+            than `upper_p_value_threshold` for our Monte Carlo framework. Defaults to `None`.
 
     Attributes:
         is_leaf (bool): indicates if the current TreeNode is a tree leaf.
@@ -657,13 +688,33 @@ class TreeNode(object):
         number_non_empty_classes (int): number of classes having no sample in this TreeNode.
         number_samples_in_rarest_class (int): number of samples whose class is the rarest non-empty
             one.
+        is_monte_carlo_criterion (bool): indicates if the splitting criterion uses our Monte Carlo
+            framework.
+        upper_p_value_threshold (float): the p-value-upper-threshold for our Monte Carlo framework.
+        lower_p_value_threshold (float): the p-value-lower-threshold for our Monte Carlo framework.
+        prob_monte_carlo (float): the probability of accepting an attribute with p-value smaller
+            than `lower_p_value_threshold` and rejecting an attribute with p-value greater than
+            `upper_p_value_threshold` for our Monte Carlo framework.
     """
     def __init__(self, dataset, valid_samples_indices, valid_nominal_attribute,
-                 max_depth_remaining, min_samples_per_node, use_stop_conditions=False):
+                 max_depth_remaining, min_samples_per_node, use_stop_conditions=False,
+                 is_monte_carlo_criterion=False, upper_p_value_threshold=None,
+                 lower_p_value_threshold=None, prob_monte_carlo=None, monte_carlo_cache=None):
         self._use_stop_conditions = use_stop_conditions
-        self.is_leaf = True
+
+        self._is_monte_carlo_criterion = is_monte_carlo_criterion
+        self.upper_p_value_threshold = upper_p_value_threshold
+        self.lower_p_value_threshold = lower_p_value_threshold
+        self.prob_monte_carlo = prob_monte_carlo
+        if is_monte_carlo_criterion and monte_carlo_cache is None:
+            self.monte_carlo_cache = {}
+        else:
+            self.monte_carlo_cache = monte_carlo_cache
+
         self.max_depth_remaining = max_depth_remaining
         self._min_samples_per_node = min_samples_per_node
+
+        self.is_leaf = True
         self.node_split = None
         self.nodes = []
         self.contingency_tables = None

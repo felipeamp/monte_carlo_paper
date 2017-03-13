@@ -4,5 +4,4 @@ Code used to run tests for the Monte Carlo paper.
 
 Pre-requisites:
 - Python 3
-- Numpy + Scipy + Scikit-learn + LAPACK + OpenBLAS
-- CVX + cvxpy (optinal, used only for Max Cut methods)
+- Numpy + Scipy + Scikit-learn + LAPACK (optional, but recommended) + OpenBLAS (optional, but recommended)

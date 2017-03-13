@@ -7,10 +7,13 @@
 import math
 import random
 import sys
+import timeit
 
 import numpy as np
 from sklearn.model_selection import StratifiedKFold, KFold
 from scipy.stats import chi2
+
+import monte_carlo
 
 
 MIN_ALLOWED_IN_TWO_LARGEST = 40
@@ -38,7 +41,7 @@ class DecisionTree(object):
             than `upper_p_value_threshold` for our Monte Carlo framework. Defaults to `None`.
     """
     def __init__(self, criterion, is_monte_carlo_criterion=False, upper_p_value_threshold=None,
-        lower_p_value_threshold=None, prob_monte_carlo=None):
+                 lower_p_value_threshold=None, prob_monte_carlo=None):
         #TESTED!
         self._criterion = criterion
         self._dataset = None
@@ -52,6 +55,16 @@ class DecisionTree(object):
         """Returns the TreeNode at the root of the tree. Might be None.
         """
         return self._root_node
+
+    def get_tree_time_num_tests_fails(self):
+        '''Returns the total time taken to calculate the number of tests and fails allowed at each
+        node in the tree.'''
+        return self._root_node.get_subtree_time_num_tests_fails()
+
+    def get_tree_time_expected_tests(self):
+        '''Returns the total time taken to calculate the total expected number of tests at each node
+        in the tree.'''
+        return self._root_node.get_subtree_time_expected_tests()
 
     def _classify_sample(self, sample, sample_key):
         #TESTED!
@@ -664,6 +677,14 @@ class TreeNode(object):
         prob_monte_carlo (float, optional): the probability of accepting an attribute with p-value
             smaller than `lower_p_value_threshold` and rejecting an attribute with p-value greater
             than `upper_p_value_threshold` for our Monte Carlo framework. Defaults to `None`.
+        monte_carlo_t_f_cache (:obj:'dict' of 'tuple' of 'int', optional): cache used to save the
+            number of tests and number of fails allowed, given the number of attributes. Defaults to
+            `None`.
+        calculate_expected_tests (bool, optional): indicates wether we should calculate the expected
+            number of tests done by our monte carlo framework. Defaults to `False`.
+        monte_carlo_expected_cache (:obj:'dict' of 'tuple' of 'int', optional):  cache used to save
+            the number of tests and number of fails allowed, given the number of attributes.
+            Defaults to `None`.
 
     Attributes:
         is_leaf (bool): indicates if the current TreeNode is a tree leaf.
@@ -681,6 +702,11 @@ class TreeNode(object):
             number of times a sample has value i in this attribute and training dataset). Used by
             many criteria when calculating the optimal split. Note that, for invalid attributes, the
             entry is a tuple with empty lists ([], []).
+        dataset (Dataset): dataset containing the training samples.
+        valid_samples_indices (:obj:'list' of 'int'): contains the indices of the valid training
+            samples.
+        valid_nominal_attribute (:obj:'list' of 'bool'): list where the i-th entry indicates wether
+            the i-th attribute from the dataset is valid and nominal or not.
         num_valid_samples (int): number of training samples in this TreeNode.
         class_index_num_samples (:obj:'list' of 'int'): list where the i-th entry indicates the
             number of samples having class i.
@@ -695,21 +721,42 @@ class TreeNode(object):
         prob_monte_carlo (float): the probability of accepting an attribute with p-value smaller
             than `lower_p_value_threshold` and rejecting an attribute with p-value greater than
             `upper_p_value_threshold` for our Monte Carlo framework.
+        monte_carlo_t_f_cache (:obj:'dict' of 'tuple' of 'int'): cache used to save the number of
+            tests and number of fails allowed, given the number of attributes.
+        calculate_expected_tests (bool): indicates wether we should calculate the expected number of
+            tests done by our monte carlo framework.
+        monte_carlo_expected_cache (:obj:'dict' of 'tuple' of 'int'):  cache used to save the number
+            of tests and number of fails allowed, given the number of attributes.
+        total_expected_num_tests (float): total number of expected tests to be done at this node, in
+            the worst-case p-value distribution.
+        time_num_tests_fails (float): time taken to calculate the value of
+            `total_expected_num_tests`, in seconds.
+        time_expected_tests (float): time taken to calculate the value of
+            `total_expected_num_tests`, in seconds.
     """
     def __init__(self, dataset, valid_samples_indices, valid_nominal_attribute,
                  max_depth_remaining, min_samples_per_node, use_stop_conditions=False,
                  is_monte_carlo_criterion=False, upper_p_value_threshold=None,
-                 lower_p_value_threshold=None, prob_monte_carlo=None, monte_carlo_cache=None):
+                 lower_p_value_threshold=None, prob_monte_carlo=None, monte_carlo_t_f_cache=None,
+                 calculate_expected_tests=False, monte_carlo_expected_cache=None):
         self._use_stop_conditions = use_stop_conditions
 
-        self._is_monte_carlo_criterion = is_monte_carlo_criterion
+        self.is_monte_carlo_criterion = is_monte_carlo_criterion
+        self.calculate_expected_tests = calculate_expected_tests
         self.upper_p_value_threshold = upper_p_value_threshold
         self.lower_p_value_threshold = lower_p_value_threshold
         self.prob_monte_carlo = prob_monte_carlo
-        if is_monte_carlo_criterion and monte_carlo_cache is None:
-            self.monte_carlo_cache = {}
+        if is_monte_carlo_criterion and monte_carlo_t_f_cache is None:
+            self.monte_carlo_t_f_cache = {}
         else:
-            self.monte_carlo_cache = monte_carlo_cache
+            self.monte_carlo_t_f_cache = monte_carlo_t_f_cache
+        if calculate_expected_tests and monte_carlo_expected_cache is None:
+            self.monte_carlo_expected_cache = {}
+        else:
+            self.monte_carlo_expected_cache = monte_carlo_expected_cache
+        self.total_expected_num_tests = 0
+        self.time_num_tests_fails = 0.0
+        self.time_expected_tests = 0.0
 
         self.max_depth_remaining = max_depth_remaining
         self._min_samples_per_node = min_samples_per_node
@@ -719,11 +766,11 @@ class TreeNode(object):
         self.nodes = []
         self.contingency_tables = None
 
-        self._dataset = dataset
-        self._valid_samples_indices = valid_samples_indices
-        # Note that self._valid_nominal_attribute might be different from
-        # self._dataset.valid_nominal_attribute when use_stop_conditions == True.
-        self._valid_nominal_attribute = valid_nominal_attribute
+        self.dataset = dataset
+        self.valid_samples_indices = valid_samples_indices
+        # Note that self.valid_nominal_attribute might be different from
+        # self.dataset.valid_nominal_attribute when use_stop_conditions == True.
+        self.valid_nominal_attribute = valid_nominal_attribute
 
         self.num_valid_samples = len(valid_samples_indices)
         self.class_index_num_samples = [0] * dataset.num_classes
@@ -756,19 +803,19 @@ class TreeNode(object):
         self.contingency_tables = [] # vector of pairs (attrib_contingency_table,
                                      #                  attrib_values_num_samples)
         for (attrib_index,
-             is_valid_nominal_attribute) in enumerate(self._valid_nominal_attribute):
+             is_valid_nominal_attribute) in enumerate(self.valid_nominal_attribute):
             if not is_valid_nominal_attribute:
                 self.contingency_tables.append(([], []))
                 continue
 
-            attrib_num_values = len(self._dataset.attrib_int_to_value[attrib_index])
-            curr_contingency_table = np.zeros((attrib_num_values, self._dataset.num_classes),
+            attrib_num_values = len(self.dataset.attrib_int_to_value[attrib_index])
+            curr_contingency_table = np.zeros((attrib_num_values, self.dataset.num_classes),
                                               dtype=float)
             curr_values_num_samples = np.zeros((attrib_num_values), dtype=float)
 
-            for sample_index in self._valid_samples_indices:
-                curr_sample_value = self._dataset.samples[sample_index][attrib_index]
-                curr_sample_class = self._dataset.sample_class[sample_index]
+            for sample_index in self.valid_samples_indices:
+                curr_sample_value = self.dataset.samples[sample_index][attrib_index]
+                curr_sample_class = self.dataset.sample_class[sample_index]
                 curr_contingency_table[curr_sample_value][curr_sample_class] += 1
                 curr_values_num_samples[curr_sample_value] += 1
 
@@ -870,10 +917,10 @@ class TreeNode(object):
             return None
 
         if self._use_stop_conditions:
-            num_valid_attributes = sum(self._dataset.valid_numeric_attribute)
-            new_valid_nominal_attribute = self._valid_nominal_attribute[:]
+            num_valid_attributes = sum(self.dataset.valid_numeric_attribute)
+            new_valid_nominal_attribute = self.valid_nominal_attribute[:]
             for (attrib_index,
-                 is_valid_nominal_attribute) in enumerate(self._valid_nominal_attribute):
+                 is_valid_nominal_attribute) in enumerate(self.valid_nominal_attribute):
                 if is_valid_nominal_attribute:
                     if (self._is_attribute_valid(
                             attrib_index,
@@ -882,22 +929,60 @@ class TreeNode(object):
                         num_valid_attributes += 1
                     else:
                         new_valid_nominal_attribute[attrib_index] = False
-            self._valid_nominal_attribute = new_valid_nominal_attribute
+            self.valid_nominal_attribute = new_valid_nominal_attribute
             if num_valid_attributes == 0:
                 return None
+
+        if self.is_monte_carlo_criterion:
+            start_time = timeit.default_timer()
+            num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
+            if num_valid_nominal_attributes in self.monte_carlo_t_f_cache:
+                (num_tests, num_fails_allowed) = self.monte_carlo_t_f_cache[
+                    num_valid_nominal_attributes]
+            else:
+                (num_tests, num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
+                    self.upper_p_value_threshold,
+                    self.lower_p_value_threshold,
+                    self.prob_monte_carlo,
+                    num_valid_nominal_attributes)
+                self.monte_carlo_t_f_cache[num_valid_nominal_attributes] = (num_tests,
+                                                                            num_fails_allowed)
+            self.time_num_tests_fails = timeit.default_timer() - start_time
+        else:
+            num_tests = 0
+            num_fails_allowed = 0
+
+        if self.calculate_expected_tests:
+            start_time = timeit.default_timer()
+            num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
+            if num_valid_nominal_attributes in self.monte_carlo_expected_cache:
+                self.total_expected_num_tests = self.monte_carlo_expected_cache[
+                    num_valid_nominal_attributes]
+            else:
+                self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
+                    num_tests,
+                    num_fails_allowed,
+                    num_valid_nominal_attributes)
+                self.monte_carlo_expected_cache[
+                    num_valid_nominal_attributes] = self.total_expected_num_tests
+            self.time_expected_tests = timeit.default_timer() - start_time
+        else:
+            self.total_expected_num_tests = 0.0
 
         # Get best split
         (separation_attrib_index,
          splits_values,
          criterion_value,
-         p_value) = criterion.select_best_attribute_and_split(self) # self is the current TreeNode
+         p_value) = criterion.select_best_attribute_and_split(self, # self is the current TreeNode
+                                                              num_tests,
+                                                              num_fails_allowed)
 
         if math.isinf(criterion_value) or (max_p_value is not None and p_value > max_p_value):
             # Stop condition for Max Cut tree: above p_value or no valid attribute index with more
             # than one value (then criterion_value is default, which is +- inf).
             return None
 
-        if self._dataset.valid_numeric_attribute[separation_attrib_index]:
+        if self.dataset.valid_numeric_attribute[separation_attrib_index]:
             # NUMERIC ATTRIBUTE
             last_left_value = list(splits_values[0])[0]
             first_right_value = list(splits_values[1])[0]
@@ -905,8 +990,8 @@ class TreeNode(object):
             splits_samples_indices = _get_numeric_splits_samples_indices(
                 separation_attrib_index,
                 mid_point,
-                self._valid_samples_indices,
-                self._dataset.samples)
+                self.valid_samples_indices,
+                self.dataset.samples)
             # Save this node's split information.
             self.node_split = NodeSplit(separation_attrib_index,
                                         None,
@@ -926,8 +1011,8 @@ class TreeNode(object):
             splits_samples_indices = _get_splits_samples_indices(len(splits_values),
                                                                  separation_attrib_index,
                                                                  values_to_split,
-                                                                 self._valid_samples_indices,
-                                                                 self._dataset.samples)
+                                                                 self.valid_samples_indices,
+                                                                 self.dataset.samples)
             # Save this node's split information.
             self.node_split = NodeSplit(separation_attrib_index,
                                         splits_values,
@@ -939,12 +1024,19 @@ class TreeNode(object):
         # Create subtrees
         self.is_leaf = False
         for curr_split_samples_indices in splits_samples_indices:
-            self.nodes.append(TreeNode(self._dataset,
+            self.nodes.append(TreeNode(self.dataset,
                                        curr_split_samples_indices,
-                                       self._valid_nominal_attribute,
+                                       self.valid_nominal_attribute,
                                        self.max_depth_remaining - 1,
                                        self._min_samples_per_node,
-                                       self._use_stop_conditions))
+                                       self._use_stop_conditions,
+                                       self.is_monte_carlo_criterion,
+                                       self.upper_p_value_threshold,
+                                       self.lower_p_value_threshold,
+                                       self.prob_monte_carlo,
+                                       self.monte_carlo_t_f_cache,
+                                       self.calculate_expected_tests,
+                                       self.monte_carlo_expected_cache))
 
             self.nodes[-1].create_subtree(criterion, max_p_value)
 
@@ -952,6 +1044,20 @@ class TreeNode(object):
         '''Returns the number of samples in the most popular subtree. It should NOT be called in a
         leaf node (otherwise the program will exit).'''
         return max(subtree.num_valid_samples for subtree in self.nodes)
+
+    def get_subtree_time_num_tests_fails(self):
+        '''Returns the total time taken to calculate the number of tests and fails allowed at each
+        node in this subtree (including the current TreeNode).'''
+        if self.is_leaf:
+            return self.time_num_tests_fails
+        return sum(subtree.get_subtree_time_num_tests_fails() for subtree in self.nodes)
+
+    def get_subtree_time_expected_tests(self):
+        '''Returns the total time taken to calculate the total expected number of tests at each node
+        in this subtree (including the current TreeNode).'''
+        if self.is_leaf:
+            return self.time_expected_tests
+        return sum(subtree.get_subtree_time_expected_tests() for subtree in self.nodes)
 
     def is_trivial(self):
         '''Returns a bool indicating if every leaf in the tree starting at TreeNode has the same

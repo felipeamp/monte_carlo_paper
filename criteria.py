@@ -29,7 +29,18 @@ class Criterion(object):
 
     @classmethod
     @abc.abstractmethod
-    def select_best_attribute_and_split(cls, tree_node):
+    def select_best_attribute_and_split(cls, tree_node, num_tests=0, num_fails_allowed=0):
+        '''Returns the best attribute and its best split, according to the criterion, using
+        `num_tests` tests per attribute and accepting if it doesn't fail more than
+        `num_fails_allowed` times.
+
+        Args:
+          tree_node (TreeNode): tree node where we want to find the best attribute/split.
+          num_tests (int, optional): number of tests to be executed in each attribute, according to
+            our Monte Carlo framework. Defaults to `0`.
+          num_fails_allowed (int, optional): maximum number of fails allowed for an attribute to be
+            accepted according to our Monte Carlo framework. Defaults to `0`.
+        '''
         # returns (separation_attrib_index, splits_values, criterion_value, p_value)
         pass
 

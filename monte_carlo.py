@@ -30,11 +30,11 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                 - maximum number of fails allowed.
         """
     assert upper_p_value_threshold > lower_p_value_threshold
-    assert upper_p_value_threshold <= 1.0 and 0.0 < upper_p_value_threshold
-    assert lower_p_value_threshold < 1.0 and 0.0 <= lower_p_value_threshold
-    assert 0.0 <= prob_monte_carlo and prob_monte_carlo <= 1.0
+    assert upper_p_value_threshold <= 1.0 and upper_p_value_threshold > 0.0
+    assert lower_p_value_threshold < 1.0 and lower_p_value_threshold >= 0.0
+    assert prob_monte_carlo >= 0.0 and prob_monte_carlo <= 1.0
 
-    pass
+    return (0, 0)
     # return (num_tests, num_fails_allowed)
 
 def get_expected_total_num_tests(num_tests, num_fails_allowed, num_valid_nominal_attributes):
@@ -54,6 +54,9 @@ def get_expected_total_num_tests(num_tests, num_fails_allowed, num_valid_nominal
             The expected value of how many tests will be done in this dataset, for the attributes'
                 worst-case p-value distribution.
         """
-    assert num_fails_allowed < num_tests and num_tests > 0 and num_attributes > 0
-    pass
+    assert (num_tests == 0
+            or (num_fails_allowed < num_tests and num_tests > 0 and num_valid_nominal_attributes > 0))
+    return 0.0
+    # if num_tests == 0:
+    #     return 0.0
     # return expected_total_num_tests

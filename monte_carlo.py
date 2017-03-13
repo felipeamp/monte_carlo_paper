@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+
 '''This module calculates the number of tests/fails allowed in our Monte Carlo framework. It also
 calculates the maximum expected value for the number of extra tests done by using it.
 '''

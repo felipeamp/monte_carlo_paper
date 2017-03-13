@@ -677,14 +677,8 @@ class TreeNode(object):
         prob_monte_carlo (float, optional): the probability of accepting an attribute with p-value
             smaller than `lower_p_value_threshold` and rejecting an attribute with p-value greater
             than `upper_p_value_threshold` for our Monte Carlo framework. Defaults to `None`.
-        monte_carlo_t_f_cache (:obj:'dict' of 'tuple' of 'int', optional): cache used to save the
-            number of tests and number of fails allowed, given the number of attributes. Defaults to
-            `None`.
         calculate_expected_tests (bool, optional): indicates wether we should calculate the expected
             number of tests done by our monte carlo framework. Defaults to `False`.
-        monte_carlo_expected_cache (:obj:'dict' of 'tuple' of 'int', optional):  cache used to save
-            the number of tests and number of fails allowed, given the number of attributes.
-            Defaults to `None`.
 
     Attributes:
         is_leaf (bool): indicates if the current TreeNode is a tree leaf.
@@ -721,12 +715,8 @@ class TreeNode(object):
         prob_monte_carlo (float): the probability of accepting an attribute with p-value smaller
             than `lower_p_value_threshold` and rejecting an attribute with p-value greater than
             `upper_p_value_threshold` for our Monte Carlo framework.
-        monte_carlo_t_f_cache (:obj:'dict' of 'tuple' of 'int'): cache used to save the number of
-            tests and number of fails allowed, given the number of attributes.
         calculate_expected_tests (bool): indicates wether we should calculate the expected number of
             tests done by our monte carlo framework.
-        monte_carlo_expected_cache (:obj:'dict' of 'tuple' of 'int'):  cache used to save the number
-            of tests and number of fails allowed, given the number of attributes.
         total_expected_num_tests (float): total number of expected tests to be done at this node, in
             the worst-case p-value distribution.
         time_num_tests_fails (float): time taken to calculate the value of
@@ -737,8 +727,8 @@ class TreeNode(object):
     def __init__(self, dataset, valid_samples_indices, valid_nominal_attribute,
                  max_depth_remaining, min_samples_per_node, use_stop_conditions=False,
                  is_monte_carlo_criterion=False, upper_p_value_threshold=None,
-                 lower_p_value_threshold=None, prob_monte_carlo=None, monte_carlo_t_f_cache=None,
-                 calculate_expected_tests=False, monte_carlo_expected_cache=None):
+                 lower_p_value_threshold=None, prob_monte_carlo=None,
+                 calculate_expected_tests=False):
         self._use_stop_conditions = use_stop_conditions
 
         self.is_monte_carlo_criterion = is_monte_carlo_criterion
@@ -746,14 +736,7 @@ class TreeNode(object):
         self.upper_p_value_threshold = upper_p_value_threshold
         self.lower_p_value_threshold = lower_p_value_threshold
         self.prob_monte_carlo = prob_monte_carlo
-        if is_monte_carlo_criterion and monte_carlo_t_f_cache is None:
-            self.monte_carlo_t_f_cache = {}
-        else:
-            self.monte_carlo_t_f_cache = monte_carlo_t_f_cache
-        if calculate_expected_tests and monte_carlo_expected_cache is None:
-            self.monte_carlo_expected_cache = {}
-        else:
-            self.monte_carlo_expected_cache = monte_carlo_expected_cache
+
         self.total_expected_num_tests = 0
         self.time_num_tests_fails = 0.0
         self.time_expected_tests = 0.0
@@ -936,17 +919,11 @@ class TreeNode(object):
         if self.is_monte_carlo_criterion:
             start_time = timeit.default_timer()
             num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
-            if num_valid_nominal_attributes in self.monte_carlo_t_f_cache:
-                (num_tests, num_fails_allowed) = self.monte_carlo_t_f_cache[
-                    num_valid_nominal_attributes]
-            else:
-                (num_tests, num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
-                    self.upper_p_value_threshold,
-                    self.lower_p_value_threshold,
-                    self.prob_monte_carlo,
-                    num_valid_nominal_attributes)
-                self.monte_carlo_t_f_cache[num_valid_nominal_attributes] = (num_tests,
-                                                                            num_fails_allowed)
+            (num_tests, num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
+                self.upper_p_value_threshold,
+                self.lower_p_value_threshold,
+                self.prob_monte_carlo,
+                num_valid_nominal_attributes)
             self.time_num_tests_fails = timeit.default_timer() - start_time
         else:
             num_tests = 0
@@ -955,16 +932,10 @@ class TreeNode(object):
         if self.calculate_expected_tests:
             start_time = timeit.default_timer()
             num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
-            if num_valid_nominal_attributes in self.monte_carlo_expected_cache:
-                self.total_expected_num_tests = self.monte_carlo_expected_cache[
-                    num_valid_nominal_attributes]
-            else:
-                self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
-                    num_tests,
-                    num_fails_allowed,
-                    num_valid_nominal_attributes)
-                self.monte_carlo_expected_cache[
-                    num_valid_nominal_attributes] = self.total_expected_num_tests
+            self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
+                num_tests,
+                num_fails_allowed,
+                num_valid_nominal_attributes)
             self.time_expected_tests = timeit.default_timer() - start_time
         else:
             self.total_expected_num_tests = 0.0
@@ -1034,9 +1005,7 @@ class TreeNode(object):
                                        self.upper_p_value_threshold,
                                        self.lower_p_value_threshold,
                                        self.prob_monte_carlo,
-                                       self.monte_carlo_t_f_cache,
-                                       self.calculate_expected_tests,
-                                       self.monte_carlo_expected_cache))
+                                       self.calculate_expected_tests))
 
             self.nodes[-1].create_subtree(criterion, max_p_value)
 

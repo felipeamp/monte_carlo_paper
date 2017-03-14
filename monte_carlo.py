@@ -16,13 +16,13 @@ from scipy.special import binom as binom_coef
 from scipy.stats import binom as binom_stats
 
 
+_MAX_NUM_TEST = 1000000
 _MONTE_CARLO_EXPECTED_CACHE = defaultdict(list)
     # receives (t, f), returns a list where the m-th entry has the value of E when there are m valid
     # nominal attributes.
 _MONTE_CARLO_T_F_CACHE = {} # receives (U, L, p, m), returns (t, f_allowed)
 
 
-# TODO: conferir função abaixo se num_fails_allowed é isso mesmo ou é isso + 1.
 def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo,
                                 num_valid_nominal_attributes):
     """Given the thresholds, probability confidence level and number of valid nominal attributes in
@@ -59,23 +59,26 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
     assert upper_p_value_threshold <= 1.0 and upper_p_value_threshold > 0.0
     assert lower_p_value_threshold < 1.0 and lower_p_value_threshold >= 0.0
     assert prob_monte_carlo >= 0.0 and prob_monte_carlo <= 1.0
+    assert num_valid_nominal_attributes > 0
 
     if (upper_p_value_threshold,
             lower_p_value_threshold,
             prob_monte_carlo,
             num_valid_nominal_attributes) in _MONTE_CARLO_T_F_CACHE:
         return _MONTE_CARLO_T_F_CACHE[(upper_p_value_threshold,
-                                      lower_p_value_threshold,
-                                      prob_monte_carlo,
-                                      num_valid_nominal_attributes)]
+                                       lower_p_value_threshold,
+                                       prob_monte_carlo,
+                                       num_valid_nominal_attributes)]
+
     # We need to calculate these new values of num_tests and num_fails_allowed.
-    num_fails_allowed = 1
-    while True:
+    # TODO: use exponential search to remove the need for _MAX_NUM_TEST.
+    # TODO: Separate the binary searches in a function.
+    for num_fails_allowed in range(_MAX_NUM_TEST):
         # Let's get the largest t that satisfies the condition for L.
-        # Note that, since s(x, t, num_fails_allowed) decreases as t increases, all t smaller than
-        # the one we'll find satisty the condition for L.
+        # Note that, since s(x, t, num_fails_allowed) decreases as t increases, every t smaller than
+        # the one we'll find also satisfies the condition for L.
         num_tests_low = num_fails_allowed + 1
-        num_tests_high = 1000
+        num_tests_high = _MAX_NUM_TEST
 
         # # DEBUG:
         # print('-'*80)
@@ -85,7 +88,10 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
 
         while num_tests_high > num_tests_low:
             num_tests_mid = (num_tests_low + num_tests_high + 1) // 2 # Round up
-            if _is_ok_l(num_tests_mid, num_fails_allowed, lower_p_value_threshold, prob_monte_carlo):
+            if _is_ok_l(num_tests_mid,
+                        num_fails_allowed,
+                        lower_p_value_threshold,
+                        prob_monte_carlo):
                 num_tests_low = num_tests_mid
 
                 # # DEBUG:
@@ -99,6 +105,7 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                 # print('num_tests_low =', num_tests_low)
                 # print('num_tests_high =', num_tests_high)
 
+        # Maybe we have num_tests_low == num_tests_high but it doesn't satisfies the condition for L
         if not _is_ok_l(num_tests_high,
                         num_fails_allowed,
                         lower_p_value_threshold,
@@ -108,10 +115,10 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
             largest_num_tests_l = num_tests_high
 
         # Let's get the smallest num_tests that satisfies the condition for U.
-        # Note that, since s(x, num_tests, num_fails_allowed) decreases as num_tests increases, all
-        # num_tests larger than the one we'll find satisty the condition for U.
+        # Note that, since s(x, num_tests, num_fails_allowed) decreases as num_tests increases,
+        # every num_tests larger than the one we'll find also satisfies the condition for U.
         num_tests_low = num_fails_allowed + 1
-        num_tests_high = 1000
+        num_tests_high = _MAX_NUM_TEST
 
         # # DEBUG:
         # print('-'*80)
@@ -125,7 +132,7 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                         num_fails_allowed,
                         upper_p_value_threshold,
                         prob_monte_carlo,
-                        num_attrib):
+                        num_valid_nominal_attributes):
                 num_tests_high = num_tests_mid
 
                 # # DEBUG:
@@ -139,19 +146,24 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                 # print('num_tests_low =', num_tests_low)
                 # print('num_tests_high =', num_tests_high)
 
-        if not _is_ok_u(num_tests_high, num_fails_allowed, upper_p_value_threshold, prob_monte_carlo, num_attrib):
+        # Maybe we have num_tests_low == num_tests_high but it doesn't satisfies the condition for U
+        if not _is_ok_u(num_tests_high,
+                        num_fails_allowed,
+                        upper_p_value_threshold,
+                        prob_monte_carlo,
+                        num_valid_nominal_attributes):
             continue
         else:
             smallest_num_tests_u = num_tests_high
 
         if smallest_num_tests_u <= largest_num_tests_l:
             _MONTE_CARLO_T_F_CACHE[(upper_p_value_threshold,
-                                   lower_p_value_threshold,
-                                   prob_monte_carlo,
-                                   num_valid_nominal_attributes)] = (smallest_num_tests_u,
-                                                                     num_fails_allowed)
+                                    lower_p_value_threshold,
+                                    prob_monte_carlo,
+                                    num_valid_nominal_attributes)] = (smallest_num_tests_u,
+                                                                      num_fails_allowed)
             return smallest_num_tests_u, num_fails_allowed
-        num_fails_allowed += 1
+        return (None, None)
 
 
 def get_expected_total_num_tests(num_tests, num_fails_allowed, num_valid_nominal_attributes):
@@ -178,90 +190,108 @@ def get_expected_total_num_tests(num_tests, num_fails_allowed, num_valid_nominal
 
     if num_tests == 0:
         return 0.0
-    if (num_tests, num_fails_allowed, num_valid_nominal_attributes) in _MONTE_CARLO_EXPECTED_CACHE:
-        return _MONTE_CARLO_EXPECTED_CACHE[
-            (num_tests, num_fails_allowed, num_valid_nominal_attributes)]
+    if (num_valid_nominal_attributes
+            < len(_MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)])):
+        return _MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)][
+            num_valid_nominal_attributes - 1]
 
     # We need to calculate this new cost
     s_array = _get_s_coef_array(num_tests, num_fails_allowed)
     ds_array = _get_s_derivative_coef_array(num_tests, num_fails_allowed)
     max_value_for_root = _get_max_value_for_root(num_tests, num_fails_allowed)
 
-    starting_m = len(_MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)]) + 1
-    o_i = _MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)][-1]
+    starting_num_attributes = len(_MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)])
+    if starting_num_attributes == 1:
+        o_i = num_tests
     else:
-        o_i = get_o_1(num_tests)#, num_fails_allowed, s_array, ds_array, max_value_for_root)
-        print('o_1 =', o_i)
-        save_t_f_m(num_tests, num_fails_allowed, 1, o_i)
-        starting_m = 2
+        o_i = _MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)][-1]
+        _MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)].append(o_i)
 
-    for i in range(starting_m, m + 1):
-        print('='*80)
-        print('i =', i)
-        r_i_prev = get_r_i(num_tests, num_fails_allowed, s_array, ds_array, o_i, max_value_for_root)
-        # DEBUG
-        print('r_{i-1}:')
-        print(r_i_prev)
-        print('*'*50)
-        print('Calculating possible increments:')
-        max_increment_found = max(get_increment_o_i(q, num_tests, num_fails_allowed, o_i)
-                                  for q in r_i_prev)
+        # DEBUG:
+        # print('o_1 =', o_i)
+
+    # `i` is the current number of valid nominal attributes
+    for i in range(starting_num_attributes + 1, num_valid_nominal_attributes + 1):
+
+        # # DEBUG:
+        # print('='*80)
+        # print('i =', i)
+
+        r_i_prev = _get_r_i(num_tests,
+                            num_fails_allowed,
+                            s_array,
+                            ds_array,
+                            o_i,
+                            max_value_for_root)
+
+        # # DEBUG
+        # print('r_{i-1}:')
+        # print(r_i_prev)
+        # print('*'*50)
+        # print('Calculating possible increments:')
+
+        max_increment_found = max(_get_increment_o_i(root, num_tests, num_fails_allowed, o_i)
+                                  for root in r_i_prev)
         o_i += max_increment_found
-        print('*'*50)
-        print('max_increment_found =', max_increment_found)
-        print('o_i =', o_i)
-        save_t_f_m(num_tests, num_fails_allowed, i, o_i)
 
-    # DEBUG
-    print('='*80)
-    print('num_tests =', num_tests)
-    print('num_fails_allowed =', num_fails_allowed)
-    print('m =', m)
-    print('o_m =', o_i)
-    print('E =', o_i)
-    print('E/m =', o_i/m)
-    print('='*80)
+        # # DEBUG:
+        # print('*'*50)
+        # print('max_increment_found =', max_increment_found)
+        # print('o_i =', o_i)
+
+        _MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)].append(o_i)
+
+    # # DEBUG
+    # print('='*80)
+    # print('num_tests =', num_tests)
+    # print('num_fails_allowed =', num_fails_allowed)
+    # print('num_valid_nominal_attributes =', num_valid_nominal_attributes)
+    # print('o_m =', o_i)
+    # print('E =', o_i)
+    # print('E/num_valid_nominal_attributes =', o_i / num_valid_nominal_attributes)
+    # print('='*80)
 
     return o_i
 
 
-def _get_max_value_for_root(t, num_fails_allowed):
-    return 1. - num_fails_allowed / t
+def _get_max_value_for_root(num_tests, num_fails_allowed):
+    return 1. - (num_fails_allowed + 1) / num_tests
 
 
-def _get_s_derivative_coef_array(t, num_fails_allowed):
-    ret = np.zeros(t + 1, dtype=float)
-    for j in range(0, num_fails_allowed):
+def _get_s_derivative_coef_array(num_tests, num_fails_allowed):
+    ret = np.zeros(num_tests + 1, dtype=float)
+    for j in range(num_fails_allowed + 1):
         curr_coef = 0.0
-        for i in range(j, num_fails_allowed):
+        for i in range(j, num_fails_allowed + 1):
             if (i - j) & 1: # (i - j) is odd, thus (-1)**(i-j) == -1
-                curr_coef -= _binom_coef(t, i) * _binom_coef(i, j)
+                curr_coef -= binom_coef(num_tests, i) * binom_coef(i, j)
             else: # (i - j) is even, thus (-1)**(i-j) == 1
-                curr_coef += _binom_coef(t, i) * _binom_coef(i, j)
-        ret[j + 1] = (t - j) * curr_coef
+                curr_coef += binom_coef(num_tests, i) * binom_coef(i, j)
+        ret[j + 1] = (num_tests - j) * curr_coef
     return ret
 
 
-def _get_s_coef_array(t, num_fails_allowed):
-    ret = np.zeros(t + 1, dtype=float)
-    for k in range(0, num_fails_allowed):
+def _get_s_coef_array(num_tests, num_fails_allowed):
+    ret = np.zeros(num_tests + 1, dtype=float)
+    for k in range(num_fails_allowed + 1):
         curr_coef = 0.0
-        for i in range(k, num_fails_allowed):
+        for i in range(k, num_fails_allowed + 1):
             if (i - k) & 1: # (i - k) is odd, thus (-1)**(i-k) == -1
-                curr_coef -= _binom_coef(t, i) * _binom_coef(i, k)
+                curr_coef -= binom_coef(num_tests, i) * binom_coef(i, k)
             else: # (i - k) is even, thus (-1)**(i-k) == 1
-                curr_coef += _binom_coef(t, i) * _binom_coef(i, k)
+                curr_coef += binom_coef(num_tests, i) * binom_coef(i, k)
         ret[k] = curr_coef
     return ret
 
 
-def get_r_i(t, f, s_array, ds_array, o_i, max_value_for_root):
+def _get_r_i(num_tests, num_fails_allowed, s_array, ds_array, o_i, max_value_for_root):
     coef_array = np.zeros(2 + s_array.shape[0], dtype=float)
 
-    coef_array[2:] += ds_array * (t - o_i - f) - s_array * f
-    coef_array[1:-1] += ds_array * (2.0 * (o_i - t) + f)
-    coef_array[:-2] += ds_array * (t - o_i)
-    coef_array[-1] += f
+    coef_array[2:] += (ds_array * (num_tests - o_i - num_fails_allowed - 1)
+                       - s_array * (num_fails_allowed + 1))
+    coef_array[1:-1] += ds_array * (2.0 * (o_i - num_tests) + num_fails_allowed + 1)
+    coef_array[:-2] += ds_array * (num_tests - o_i)
+    coef_array[-1] += num_fails_allowed + 1
 
     roots = _get_poly_roots_in_interval(coef_array, 0.0, max_value_for_root)
     roots.add(0.0)
@@ -277,7 +307,7 @@ def get_r_i(t, f, s_array, ds_array, o_i, max_value_for_root):
 
     return roots
 
-def get_poly_roots_in_interval(coef_array, min_value_for_root, max_value_for_root):
+def _get_poly_roots_in_interval(coef_array, min_value_for_root, max_value_for_root):
     # # DEBUG
     # print('coef_array:')
     # print(coef_array)
@@ -295,14 +325,15 @@ def get_poly_roots_in_interval(coef_array, min_value_for_root, max_value_for_roo
     return ret
 
 
-def get_increment_o_i(q, t, num_fails_allowed, o_i):
-    s = _get_s(q, t, num_fails_allowed)
-    ret = num_fails_allowed / (1. - q) + s * (t - o_i - num_fails_allowed / (1. - q))
+def _get_increment_o_i(root, num_tests, num_fails_allowed, o_i):
+    s = _get_s(root, num_tests, num_fails_allowed)
+    ret = ((num_fails_allowed + 1) / (1. - root)
+           + s * (num_tests - o_i - num_fails_allowed - 1) / (1. - root))
 
     # # DEBUG
     # print('-'*40)
-    # print('q =', q)
-    # print('t =', t)
+    # print('root =', root)
+    # print('num_tests =', num_tests)
     # print('num_fails_allowed =', num_fails_allowed)
     # print('o_{i-1} =', o_i)
     # print('s =', s)
@@ -311,7 +342,5 @@ def get_increment_o_i(q, t, num_fails_allowed, o_i):
     return ret
 
 
-def _get_s(p, t, num_fails_allowed):
-    return binom_stats.cdf(num_fails_allowed - 1, t, 1. - p)
-
-
+def _get_s(prob, num_tests, num_fails_allowed):
+    return binom_stats.cdf(num_fails_allowed, num_tests, 1. - prob)

@@ -163,7 +163,7 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                                     num_valid_nominal_attributes)] = (smallest_num_tests_u,
                                                                       num_fails_allowed)
             return smallest_num_tests_u, num_fails_allowed
-        return (None, None)
+    return (None, None)
 
 
 def get_expected_total_num_tests(num_tests, num_fails_allowed, num_valid_nominal_attributes):
@@ -200,12 +200,12 @@ def get_expected_total_num_tests(num_tests, num_fails_allowed, num_valid_nominal
     ds_array = _get_s_derivative_coef_array(num_tests, num_fails_allowed)
     max_value_for_root = _get_max_value_for_root(num_tests, num_fails_allowed)
 
-    starting_num_attributes = len(_MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)])
+    starting_num_attributes = len(_MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)]) + 1
     if starting_num_attributes == 1:
         o_i = num_tests
+        _MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)].append(o_i)
     else:
         o_i = _MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)][-1]
-        _MONTE_CARLO_EXPECTED_CACHE[(num_tests, num_fails_allowed)].append(o_i)
 
         # DEBUG:
         # print('o_1 =', o_i)
@@ -306,6 +306,7 @@ def _get_r_i(num_tests, num_fails_allowed, s_array, ds_array, o_i, max_value_for
     #     print('==*=='*20)
 
     return roots
+
 
 def _get_poly_roots_in_interval(coef_array, min_value_for_root, max_value_for_root):
     # # DEBUG

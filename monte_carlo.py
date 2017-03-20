@@ -16,7 +16,6 @@ from scipy.special import binom as binom_coef
 from scipy.stats import binom as binom_stats
 
 
-_MAX_NUM_TEST = 1000000
 _MONTE_CARLO_EXPECTED_CACHE = defaultdict(list)
     # receives (t, f), returns a list where the m-th entry has the value of E when there are m valid
     # nominal attributes.
@@ -54,31 +53,28 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
         return (_get_s(1 - upper_p_value_threshold, num_tests, num_fails_allowed)
                 <= 1. - math.pow(prob_monte_carlo, 1. / num_valid_nominal_attributes))
 
+    def _find_largest_num_tests_l(num_fails_allowed, lower_p_value_threshold, prob_monte_carlo):
+        """Returns the largest num_tests that satisfies the condition for L using
+        exponencial search. Note that, since s(x, num_tests, num_fails_allowed) decreases
+        as num_tests increases, every num_tests smaller than the one we'll find also satisfies
+        the condition for L.
+        """
+        num_tests_ini = num_fails_allowed + 1
+        if not _is_ok_l(num_tests_ini,
+                        num_fails_allowed,
+                        lower_p_value_threshold,
+                        prob_monte_carlo):
+            return None
 
-    assert upper_p_value_threshold > lower_p_value_threshold
-    assert upper_p_value_threshold <= 1.0 and upper_p_value_threshold > 0.0
-    assert lower_p_value_threshold < 1.0 and lower_p_value_threshold >= 0.0
-    assert prob_monte_carlo >= 0.0 and prob_monte_carlo <= 1.0
-    assert num_valid_nominal_attributes > 0
-
-    if (upper_p_value_threshold,
-            lower_p_value_threshold,
-            prob_monte_carlo,
-            num_valid_nominal_attributes) in _MONTE_CARLO_T_F_CACHE:
-        return _MONTE_CARLO_T_F_CACHE[(upper_p_value_threshold,
-                                       lower_p_value_threshold,
-                                       prob_monte_carlo,
-                                       num_valid_nominal_attributes)]
-
-    # We need to calculate these new values of num_tests and num_fails_allowed.
-    # TODO: use exponential search to remove the need for _MAX_NUM_TEST.
-    # TODO: Separate the binary searches in a function.
-    for num_fails_allowed in range(_MAX_NUM_TEST):
-        # Let's get the largest t that satisfies the condition for L.
-        # Note that, since s(x, t, num_fails_allowed) decreases as t increases, every t smaller than
-        # the one we'll find also satisfies the condition for L.
-        num_tests_low = num_fails_allowed + 1
-        num_tests_high = _MAX_NUM_TEST
+        num_exp = 0
+        num_tests_high = num_tests_ini + 1
+        while _is_ok_l(num_tests_high,
+                       num_fails_allowed,
+                       lower_p_value_threshold,
+                       prob_monte_carlo):
+            num_exp += 1
+            num_tests_high = num_tests_ini + 2**num_exp
+        num_tests_low = num_tests_high - 2**num_exp
 
         # # DEBUG:
         # print('-'*80)
@@ -110,15 +106,33 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                         num_fails_allowed,
                         lower_p_value_threshold,
                         prob_monte_carlo):
-            continue
-        else:
-            largest_num_tests_l = num_tests_high
+            return None
+        return num_tests_high
 
-        # Let's get the smallest num_tests that satisfies the condition for U.
-        # Note that, since s(x, num_tests, num_fails_allowed) decreases as num_tests increases,
-        # every num_tests larger than the one we'll find also satisfies the condition for U.
-        num_tests_low = num_fails_allowed + 1
-        num_tests_high = _MAX_NUM_TEST
+    def _find_smallest_num_tests_u(num_fails_allowed, upper_p_value_threshold, prob_monte_carlo):
+        """Returns the smallest num_tests that satisfies the condition for U using
+        exponential search. Note that, since s(x, num_tests, num_fails_allowed) decreases
+        as num_tests increases, every num_tests larger than the one we'll find also satisfies
+        the condition for U.
+        """
+        num_tests_ini = num_fails_allowed + 1
+        if _is_ok_u(num_tests_ini,
+                    num_fails_allowed,
+                    upper_p_value_threshold,
+                    prob_monte_carlo,
+                    num_valid_nominal_attributes):
+            return num_tests_ini
+
+        num_exp = 0
+        num_tests_high = num_tests_ini + 1
+        while not _is_ok_u(num_tests_high,
+                           num_fails_allowed,
+                           upper_p_value_threshold,
+                           prob_monte_carlo,
+                           num_valid_nominal_attributes):
+            num_exp += 1
+            num_tests_high = num_tests_ini + 2**num_exp
+        num_tests_low = num_tests_high - 2**num_exp
 
         # # DEBUG:
         # print('-'*80)
@@ -152,9 +166,41 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                         upper_p_value_threshold,
                         prob_monte_carlo,
                         num_valid_nominal_attributes):
+            return None
+        return num_tests_high
+
+
+    assert upper_p_value_threshold > lower_p_value_threshold
+    assert upper_p_value_threshold <= 1.0 and upper_p_value_threshold > 0.0
+    assert lower_p_value_threshold < 1.0 and lower_p_value_threshold >= 0.0
+    assert prob_monte_carlo >= 0.0 and prob_monte_carlo <= 1.0
+    assert num_valid_nominal_attributes > 0
+
+    if (upper_p_value_threshold,
+            lower_p_value_threshold,
+            prob_monte_carlo,
+            num_valid_nominal_attributes) in _MONTE_CARLO_T_F_CACHE:
+        return _MONTE_CARLO_T_F_CACHE[(upper_p_value_threshold,
+                                       lower_p_value_threshold,
+                                       prob_monte_carlo,
+                                       num_valid_nominal_attributes)]
+
+    # We need to calculate these new values of num_tests and num_fails_allowed.
+    num_fails_allowed = 0
+    while True:
+        largest_num_tests_l = _find_largest_num_tests_l(num_fails_allowed,
+                                                        lower_p_value_threshold,
+                                                        prob_monte_carlo)
+        if largest_num_tests_l is None:
+            num_fails_allowed += 1
             continue
-        else:
-            smallest_num_tests_u = num_tests_high
+
+        smallest_num_tests_u = _find_smallest_num_tests_u(num_fails_allowed,
+                                                          upper_p_value_threshold,
+                                                          prob_monte_carlo)
+        if smallest_num_tests_u is None:
+            num_fails_allowed += 1
+            continue
 
         if smallest_num_tests_u <= largest_num_tests_l:
             _MONTE_CARLO_T_F_CACHE[(upper_p_value_threshold,
@@ -162,7 +208,7 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                                     prob_monte_carlo,
                                     num_valid_nominal_attributes)] = (smallest_num_tests_u,
                                                                       num_fails_allowed)
-            return smallest_num_tests_u, num_fails_allowed
+            return (smallest_num_tests_u, num_fails_allowed)
     return (None, None)
 
 
@@ -173,7 +219,7 @@ def get_expected_total_num_tests(num_tests, num_fails_allowed, num_valid_nominal
 
     It is calculated using the stronger bound given in Theorem 2.
 
-        Arguments:
+        Args:
             num_tests (int): number of tests to be done per attribute.
             num_fails_allowed (int): maximum number of fails an attribute can have and still be
                 accepted.

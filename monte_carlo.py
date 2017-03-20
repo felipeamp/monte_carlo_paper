@@ -74,7 +74,7 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                        prob_monte_carlo):
             num_exp += 1
             num_tests_high = num_tests_ini + 2**num_exp
-        num_tests_low = int(num_tests_high - 2**(num_exp - 1))
+        num_tests_low = num_tests_high - 2**num_exp
 
         # # DEBUG:
         # print('-'*80)
@@ -132,7 +132,7 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                            num_valid_nominal_attributes):
             num_exp += 1
             num_tests_high = num_tests_ini + 2**num_exp
-        num_tests_low = int(num_tests_high - 2**(num_exp - 1))
+        num_tests_low = num_tests_high - 2**num_exp
 
         # # DEBUG:
         # print('-'*80)

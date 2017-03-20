@@ -59,17 +59,21 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
         as num_tests increases, every num_tests smaller than the one we'll find also satisfies
         the condition for L.
         """
-
         num_tests_ini = num_fails_allowed + 1
-        num_tests_high = num_tests_ini
-        num_exp = -1
+        if not _is_ok_l(num_tests_ini,
+                        num_fails_allowed,
+                        lower_p_value_threshold,
+                        prob_monte_carlo):
+            return None
+
+        num_exp = 0
+        num_tests_high = num_tests_ini + 1
         while _is_ok_l(num_tests_high,
                        num_fails_allowed,
                        lower_p_value_threshold,
                        prob_monte_carlo):
-            num_exp = num_exp + 1
+            num_exp += 1
             num_tests_high = num_tests_ini + 2**num_exp
-
         num_tests_low = int(num_tests_high - 2**(num_exp - 1))
 
         # # DEBUG:
@@ -103,7 +107,6 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                         lower_p_value_threshold,
                         prob_monte_carlo):
             return None
-
         return num_tests_high
 
     def _find_smallest_num_tests_u(num_fails_allowed, upper_p_value_threshold, prob_monte_carlo):
@@ -112,18 +115,23 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
         as num_tests increases, every num_tests larger than the one we'll find also satisfies
         the condition for U.
         """
-
         num_tests_ini = num_fails_allowed + 1
-        num_tests_high = num_tests_ini
-        num_exp = -1
+        if _is_ok_u(num_tests_ini,
+                    num_fails_allowed,
+                    upper_p_value_threshold,
+                    prob_monte_carlo,
+                    num_valid_nominal_attributes):
+            return num_tests_ini
+
+        num_exp = 0
+        num_tests_high = num_tests_ini + 1
         while not _is_ok_u(num_tests_high,
                            num_fails_allowed,
                            upper_p_value_threshold,
                            prob_monte_carlo,
                            num_valid_nominal_attributes):
-            num_exp = num_exp + 1
+            num_exp += 1
             num_tests_high = num_tests_ini + 2**num_exp
-
         num_tests_low = int(num_tests_high - 2**(num_exp - 1))
 
         # # DEBUG:
@@ -159,7 +167,6 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                         prob_monte_carlo,
                         num_valid_nominal_attributes):
             return None
-
         return num_tests_high
 
 
@@ -179,18 +186,20 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                                        num_valid_nominal_attributes)]
 
     # We need to calculate these new values of num_tests and num_fails_allowed.
-    for num_fails_allowed in range(_MAX_NUM_TEST):
-
+    num_fails_allowed = 0
+    while True:
         largest_num_tests_l = _find_largest_num_tests_l(num_fails_allowed,
                                                         lower_p_value_threshold,
                                                         prob_monte_carlo)
         if largest_num_tests_l is None:
+            num_fails_allowed += 1
             continue
 
         smallest_num_tests_u = _find_smallest_num_tests_u(num_fails_allowed,
                                                           upper_p_value_threshold,
                                                           prob_monte_carlo)
         if smallest_num_tests_u is None:
+            num_fails_allowed += 1
             continue
 
         if smallest_num_tests_u <= largest_num_tests_l:
@@ -199,7 +208,7 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
                                     prob_monte_carlo,
                                     num_valid_nominal_attributes)] = (smallest_num_tests_u,
                                                                       num_fails_allowed)
-            return smallest_num_tests_u, num_fails_allowed
+            return (smallest_num_tests_u, num_fails_allowed)
     return (None, None)
 
 

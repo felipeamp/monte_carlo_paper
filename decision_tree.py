@@ -17,31 +17,32 @@ import monte_carlo
 
 
 MIN_ALLOWED_IN_TWO_LARGEST = 40
-MAX_P_VALUE_CHI_SQUARE_TEST = 0.1
 
 
 class DecisionTree(object):
     """Data structure containing basic information pertaining to the whole tree.
 
-        Every attribute is protected. This class' state should be accessed only indirectly, through
-    its methods.
-
-    Args:
-        criterion (Criterion): criterion which will be used to generate the tree nodes/splits.
-        is_monte_carlo_criterion (bool, optional): indicates if the splitting criterion uses our
-            Monte Carlo framework. Defaults to `False`.
-        upper_p_value_threshold (float, optional): the p-value-upper-threshold for our Monte Carlo
-            framework. If an attribute has a p-value above this threshold, it will be rejected with
-            probability `prob_monte_carlo`. Defaults to `None`.
-        lower_p_value_threshold (float, optional): the p-value-lower-threshold for our Monte Carlo
-            framework. If an attribute has a p-value below this threshold, it will be accepted with
-            probability `prob_monte_carlo`. Defaults to `None`.
-        prob_monte_carlo (float, optional): the probability of accepting an attribute with p-value
-            smaller than `lower_p_value_threshold` and rejecting an attribute with p-value greater
-            than `upper_p_value_threshold` for our Monte Carlo framework. Defaults to `None`.
+        This class' state should be accessed only indirectly, through its methods.
     """
     def __init__(self, criterion, is_monte_carlo_criterion=False, upper_p_value_threshold=None,
                  lower_p_value_threshold=None, prob_monte_carlo=None):
+        """Initializes a DecisionTree instance with the given arguments.
+
+        Args:
+            criterion (Criterion): criterion which will be used to generate the tree nodes/splits.
+            is_monte_carlo_criterion (bool, optional): indicates if the splitting criterion uses our
+                Monte Carlo framework. Defaults to `False`.
+            upper_p_value_threshold (float, optional): the p-value-upper-threshold for our Monte
+                Carlo framework. If an attribute has a p-value above this threshold, it will be
+                rejected with probability `prob_monte_carlo`. Defaults to `None`.
+            lower_p_value_threshold (float, optional): the p-value-lower-threshold for our Monte
+                Carlo framework. If an attribute has a p-value below this threshold, it will be
+                accepted with probability `prob_monte_carlo`. Defaults to `None`.
+            prob_monte_carlo (float, optional): the probability of accepting an attribute with
+                p-value smaller than `lower_p_value_threshold` and rejecting an attribute with
+                p-value greater than `upper_p_value_threshold` for our Monte Carlo framework.
+                Defaults to `None`.
+        """
         #TESTED!
         self._criterion = criterion
         self._dataset = None
@@ -57,13 +58,13 @@ class DecisionTree(object):
         return self._root_node
 
     def get_tree_time_num_tests_fails(self):
-        '''Returns the total time taken to calculate the number of tests and fails allowed at each
-        node in the tree.'''
+        """Returns the total time taken to calculate the number of tests and fails allowed at each
+        node in the tree."""
         return self._root_node.get_subtree_time_num_tests_fails()
 
     def get_tree_time_expected_tests(self):
-        '''Returns the total time taken to calculate the total expected number of tests at each node
-        in the tree.'''
+        """Returns the total time taken to calculate the total expected number of tests at each node
+        in the tree."""
         return self._root_node.get_subtree_time_expected_tests()
 
     def _classify_sample(self, sample, sample_key):
@@ -154,28 +155,29 @@ class DecisionTree(object):
                 unkown_value_attrib_index_array)
 
     def train(self, dataset, training_samples_indices, max_depth, min_samples_per_node,
-              max_p_value=None, use_stop_conditions=False):
+              use_stop_conditions=False, max_p_value_chi_sq=0.1):
         """Trains the tree in a recursive fashion, starting at the root's TreeNode.
 
-        Arguments:
+        Args:
             dataset (Dataset): dataset containing the samples used for training.
             training_samples_indices (:obj:'list' of 'int'): list containing the indices of samples
                 of `dataset` used for training.
             max_depth (int): maximum tree depth allowed. Zero means the root is a leaf.
             min_samples_per_node (int): if a node has less than this number of training samples, it
                 will necessarily be a leaf.
-            max_p_value (float, optional): only used for some max cut criteria. It is the maximum
-                p-value allowed for a split. Defaults to `None`.
             use_stop_conditions (bool, optional): informs wether we should use prunning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
                 than `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at
                 least two classes have this number of samples) or if a chi-square test, applied on
                 the attributes' contingency table has a p-value greater or equal to
-                `MAX_P_VALUE_CHI_SQUARE_TEST`. When an attribute is considered invalid for the above
+                `max_p_value_chi_sq`. When an attribute is considered invalid for the above
                 reasons, this information will be passed to every child node of the current
                 TreeNode. Note that numeric attributes are never tested in this way.Defaults to
                 `False`.
+            max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
+                be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
+                `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
         """
         #TESTED!
         self._dataset = dataset
@@ -186,23 +188,26 @@ class DecisionTree(object):
                                    max_depth,
                                    min_samples_per_node,
                                    use_stop_conditions,
+                                   max_p_value_chi_sq,
                                    is_monte_carlo_criterion=self._is_monte_carlo_criterion,
                                    upper_p_value_threshold=self._upper_p_value_threshold,
                                    lower_p_value_threshold=self._lower_p_value_threshold,
                                    prob_monte_carlo=self._prob_monte_carlo)
-        self._root_node.create_subtree(self._criterion, max_p_value)
+        self._root_node.create_subtree(self._criterion)
+        print('Starting prunning trivial subtrees...')
+        self._root_node.prune_trivial_subtrees()
         print('Done!')
 
-    def train_and_self_validate(self, dataset, training_samples_indices,
-                                validation_sample_indices, max_depth, min_samples_per_node,
-                                max_p_value=None, use_stop_conditions=False):
+    def train_and_test(self, dataset, training_samples_indices, validation_sample_indices,
+                       max_depth, min_samples_per_node, use_stop_conditions=False,
+                       max_p_value_chi_sq=0.1):
         """Trains a tree with part of the dataset (training samples) and tests the tree
         classification in another part (validation samples).
 
         Note that although the training and test samples are part of the same Dataset class, they
         usually shouldn't intersect.
 
-        Arguments:
+        Args:
             dataset (Dataset): dataset containing the samples used for training.
             training_samples_indices (:obj:'list' of 'int'): list containing the indices of samples
                 of `dataset` used for training.
@@ -211,18 +216,19 @@ class DecisionTree(object):
             max_depth (int): maximum tree depth allowed. Zero means the root is a leaf.
             min_samples_per_node (int): if a node has less than this number of training samples, it
                 will necessarily be a leaf.
-            max_p_value (float, optional): only used for some max cut criteria. It is the maximum
-                p-value allowed for a split. Defaults to `None`.
             use_stop_conditions (bool, optional): informs wether we should use prunning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
                 than `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at
                 least two classes have this number of samples) or if a chi-square test, applied on
                 the attributes' contingency table has a p-value greater or equal to
-                `MAX_P_VALUE_CHI_SQUARE_TEST`. When an attribute is considered invalid for the above
+                `max_p_value_chi_sq`. When an attribute is considered invalid for the above
                 reasons, this information will be passed to every child node of the current
                 TreeNode. Note that numeric attributes are never tested in this way.Defaults to
                 `False`.
+            max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
+                be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
+                `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
 
         Returns:
             A tuple containing the tree's max depth in the second entry and, in the first entry,
@@ -247,8 +253,8 @@ class DecisionTree(object):
                    training_samples_indices,
                    max_depth,
                    min_samples_per_node,
-                   max_p_value,
-                   use_stop_conditions)
+                   use_stop_conditions,
+                   max_p_value_chi_sq)
         max_depth = self.get_root_node().get_max_depth()
         return (self._classify_samples(self._dataset.samples,
                                        self._dataset.sample_class,
@@ -257,22 +263,20 @@ class DecisionTree(object):
                                        self._dataset.sample_index_to_key),
                 max_depth)
 
-    def cross_validate(self, dataset, num_folds, max_depth, min_samples_per_node, max_p_value=None,
+    def cross_validate(self, dataset, num_folds, max_depth, min_samples_per_node,
                        is_stratified=True, print_tree=False, seed=None, print_samples=False,
-                       use_stop_conditions=False):
+                       use_stop_conditions=False, max_p_value_chi_sq=0.1):
         """Does a cross-validation using a given dataset.
 
-        It splits this dataset in `num_folds` folds and calls `train_and_self_validate` on each.
-        Might be given a seed for the dataset's random splitting and might be stratified.
+        It splits this dataset in `num_folds` folds and calls `train_and_test` on each. Might be
+        given a seed for the dataset's random splitting and might be stratified.
 
-        Arguments:
+        Args:
             dataset (Dataset): dataset containing the samples used for training.
             num_folds (int): number of folds used in the cross-validation.
             max_depth (int): maximum tree depth allowed. Zero means the root is a leaf.
             min_samples_per_node (int): if a node has less than this number of training samples, it
                 will necessarily be a leaf.
-            max_p_value (float, optional): only used for some max cut criteria. It is the maximum
-                p-value allowed for a split. Defaults to `None`.
             is_stratified (bool, optional): Indicates wheter the cross-validation should be
                 stratified or just a simple k-fold cross-validation. Stratified means the samples'
                 splitting will try to keep the classes' distribution the same across folds. Defaults
@@ -289,10 +293,13 @@ class DecisionTree(object):
                 than `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at
                 least two classes have this number of samples) or if a chi-square test, applied on
                 the attributes' contingency table has a p-value greater or equal to
-                `MAX_P_VALUE_CHI_SQUARE_TEST`. When an attribute is considered invalid for the above
+                `max_p_value_chi_sq`. When an attribute is considered invalid for the above
                 reasons, this information will be passed to every child node of the current
                 TreeNode. Note that numeric attributes are never tested in this way.Defaults to
                 `False`.
+            max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
+                be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
+                `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
 
         Returns:
             A tuple containing, in order:
@@ -361,14 +368,13 @@ class DecisionTree(object):
                   curr_classified_with_unkown_value_array,
                   curr_num_unkown,
                   curr_unkown_value_attrib_index_array),
-                 curr_max_depth) = self.train_and_self_validate(
-                     dataset,
-                     training_samples_indices,
-                     validation_sample_indices,
-                     max_depth,
-                     min_samples_per_node,
-                     max_p_value,
-                     use_stop_conditions)
+                 curr_max_depth) = self.train_and_test(dataset,
+                                                       training_samples_indices,
+                                                       validation_sample_indices,
+                                                       max_depth,
+                                                       min_samples_per_node,
+                                                       use_stop_conditions,
+                                                       max_p_value_chi_sq)
 
                 max_depth_per_fold.append(curr_max_depth)
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
@@ -404,14 +410,13 @@ class DecisionTree(object):
                   curr_classified_with_unkown_value_array,
                   curr_num_unkown,
                   curr_unkown_value_attrib_index_array),
-                 curr_max_depth) = self.train_and_self_validate(
-                     dataset,
-                     training_samples_indices,
-                     validation_sample_indices,
-                     max_depth,
-                     min_samples_per_node,
-                     max_p_value,
-                     use_stop_conditions)
+                 curr_max_depth) = self.train_and_test(dataset,
+                                                       training_samples_indices,
+                                                       validation_sample_indices,
+                                                       max_depth,
+                                                       min_samples_per_node,
+                                                       use_stop_conditions,
+                                                       max_p_value_chi_sq)
 
                 max_depth_per_fold.append(curr_max_depth)
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
@@ -435,16 +440,22 @@ class DecisionTree(object):
                     print('Fold:', fold_count)
                     self.save_tree()
 
-        return  (classifications, num_correct_classifications,
-                 num_correct_classifications_wo_unkown, total_cost, total_cost_wo_unkown,
-                 classified_with_unkown_value_array, num_unkown, unkown_value_attrib_index_array,
-                 nodes_infos_per_fold, max_depth_per_fold)
+        return  (classifications,
+                 num_correct_classifications,
+                 num_correct_classifications_wo_unkown,
+                 total_cost,
+                 total_cost_wo_unkown,
+                 classified_with_unkown_value_array,
+                 num_unkown,
+                 unkown_value_attrib_index_array,
+                 nodes_infos_per_fold,
+                 max_depth_per_fold)
 
     def test(self, test_sample_indices):
         """Tests the (already trained) tree over samples from the same dataset as the
             training set. If the tree hasn't been trained, the program will exit.
 
-        Arguments:
+        Args:
             test_sample_indices (:obj:'list' of 'int'): list of the test set indices for samples
                 from the same dataset used for training.
 
@@ -481,7 +492,7 @@ class DecisionTree(object):
         """Tests the (already trained) tree using all samples from a given csv file. If the tree
         hasn't been trained, the program will exit.
 
-        Arguments:
+        Args:
             test_dataset_csv_filepath (str): path to the test dataset.
             key_attrib_index (int): column index of the samples' keys on the csv.
             class_attrib_index (int): column index of the samples' classes on the csv.
@@ -521,70 +532,11 @@ class DecisionTree(object):
                                       list(range(len(self._dataset.test_sample_index_to_key))),
                                       self._dataset.test_sample_index_to_key)
 
-    def train_and_test(self, dataset, training_samples_indices, test_sample_indices,
-                       max_depth, min_samples_per_node, max_p_value=None,
-                       use_stop_conditions=False):
-        """Trains a tree with part of the dataset (training samples) and tests the tree
-        classification in another part (validation samples).
-
-        Note that although the training and test samples are part of the same Dataset class, they
-        usually shouldn't intersect.
-
-        Arguments:
-            dataset (Dataset): dataset containing the samples used for training.
-            training_samples_indices (:obj:'list' of 'int'): list containing the indices of samples
-                of `dataset` used for training.
-            test_sample_indices (:obj:'list' of 'int'): list containing the indices of samples of
-                `dataset` used to test the tree classification.
-            max_depth (int): maximum tree depth allowed. Zero means the root is a leaf.
-            min_samples_per_node (int): if a node has less than this number of training samples, it
-                will necessarily be a leaf.
-            max_p_value (float, optional): only used for some max cut criteria. It is the maximum
-                p-value allowed for a split. Defaults to `None`.
-            use_stop_conditions (bool, optional): informs wether we should use prunning techniques
-                to avoid using attributes with small number of samples (and, thus, avoiding
-                statistical anomalies). An attribute will be considered invalid if it contains less
-                than `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at
-                least two classes have this number of samples) or if a chi-square test, applied on
-                the attributes' contingency table has a p-value greater or equal to
-                `MAX_P_VALUE_CHI_SQUARE_TEST`. When an attribute is considered invalid for the above
-                reasons, this information will be passed to every child node of the current
-                TreeNode. Note that numeric attributes are never tested in this way.Defaults to
-                `False`.
-
-        Returns:
-            A tuple containing, in order:
-                - a list of predicted class for each test sample;
-                - the number of correct classifications;
-                - the number of correct classifications done without test samples with unkown
-                    values (that is, values that are unkown at a TreeNode -- they are classified as
-                    the most common class at that node);
-                - the total cost of the classification errors (when errors costs are uniform, this
-                    is equal to the total number of test samples minus the number of correct
-                    classifications);
-                -  the total cost of the classification errors without considering test
-                    samples with unkown values;
-                - a list of booleans indicating if the i-th test sample was classified with an
-                    unkown value;
-                - the number of test samples classified with unkown values;
-                - list where the i-th entry has the attribute index used for classification of the
-                    i-th sample when an unkown value occurred.
-        """
-
-        #TESTED!
-        self.train(dataset,
-                   training_samples_indices,
-                   max_depth,
-                   min_samples_per_node,
-                   max_p_value,
-                   use_stop_conditions)
-        return self.test(test_sample_indices)
-
     def save_tree(self, filepath=None):
         """Saves the tree information: nodes, attributes used to split each one, values to each
         side, etc.
 
-        Arguments:
+        Args:
             filepath (str, optional): file in which to save the tree. If `None`, prints to stdout.
                 Defaults to `None`.
         """
@@ -647,39 +599,6 @@ class TreeNode(object):
         It has information about the samples used during training at this node and also about it's
     NodeSplit.
 
-    Args:
-        dataset (Dataset): dataset of samples used for training/split generation.
-        valid_samples_indices (:obj:'list' of 'int'): indices of samples that should be used for
-            training at this node.
-        valid_nominal_attribute (:obj:'list' of 'bool'): the i-th entry informs wether the i-th
-            attribute is a valid nominal one.
-        max_depth_remaining (int): maximum depth that the subtree rooted at this node can have. If
-            zero, this node will be a leaf.
-        min_samples_per_node (int): minimum number of samples that must be present in order to try
-            to create a subtree rooted at this node. If less than this, this node will be a leaf.
-        use_stop_conditions (bool, optional): informs wether we should use prunning techniques to
-            avoid using attributes with small number of samples (and, thus, avoiding statistical
-            anomalies). An attribute will be considered invalid if it contains less than
-            `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at least two
-            classes have this number of samples) or if a chi-square test, applied on the attributes'
-            contingency table has a p-value greater or equal to `MAX_P_VALUE_CHI_SQUARE_TEST`. When
-            an attribute is considered invalid for the above reasons, this information will be
-            passed to every child node of the current TreeNode. Note that numeric attributes are
-            never tested in this way. Defaults to `False`.
-        is_monte_carlo_criterion (bool, optional): indicates if the splitting criterion uses our
-            Monte Carlo framework. Defaults to `False`.
-        upper_p_value_threshold (float, optional): the p-value-upper-threshold for our Monte Carlo
-            framework. If an attribute has a p-value above this threshold, it will be rejected with
-            probability `prob_monte_carlo`. Defaults to `None`.
-        lower_p_value_threshold (float, optional): the p-value-lower-threshold for our Monte Carlo
-            framework. If an attribute has a p-value below this threshold, it will be accepted with
-            probability `prob_monte_carlo`. Defaults to `None`.
-        prob_monte_carlo (float, optional): the probability of accepting an attribute with p-value
-            smaller than `lower_p_value_threshold` and rejecting an attribute with p-value greater
-            than `upper_p_value_threshold` for our Monte Carlo framework. Defaults to `None`.
-        calculate_expected_tests (bool, optional): indicates wether we should calculate the expected
-            number of tests done by our monte carlo framework. Defaults to `False`.
-
     Attributes:
         is_leaf (bool): indicates if the current TreeNode is a tree leaf.
         max_depth_remaining (int): maximum depth that the subtree rooted at the current TreeNode can
@@ -706,8 +625,6 @@ class TreeNode(object):
             number of samples having class i.
         most_common_int_class (int): index of the most frequent class.
         number_non_empty_classes (int): number of classes having no sample in this TreeNode.
-        number_samples_in_rarest_class (int): number of samples whose class is the rarest non-empty
-            one.
         is_monte_carlo_criterion (bool): indicates if the splitting criterion uses our Monte Carlo
             framework.
         upper_p_value_threshold (float): the p-value-upper-threshold for our Monte Carlo framework.
@@ -726,10 +643,52 @@ class TreeNode(object):
     """
     def __init__(self, dataset, valid_samples_indices, valid_nominal_attribute,
                  max_depth_remaining, min_samples_per_node, use_stop_conditions=False,
-                 is_monte_carlo_criterion=False, upper_p_value_threshold=None,
-                 lower_p_value_threshold=None, prob_monte_carlo=None,
-                 calculate_expected_tests=False):
+                 max_p_value_chi_sq=0.1, is_monte_carlo_criterion=False,
+                 upper_p_value_threshold=None, lower_p_value_threshold=None,
+                 prob_monte_carlo=None, calculate_expected_tests=False):
+        """Initializes a TreeNode instance with the given arguments.
+
+        Args:
+            dataset (Dataset): dataset of samples used for training/split generation.
+            valid_samples_indices (:obj:'list' of 'int'): indices of samples that should be used for
+                training at this node.
+            valid_nominal_attribute (:obj:'list' of 'bool'): the i-th entry informs wether the i-th
+                attribute is a valid nominal one.
+            max_depth_remaining (int): maximum depth that the subtree rooted at this node can have.
+                If zero, this node will be a leaf.
+            min_samples_per_node (int): minimum number of samples that must be present in order to
+                try to create a subtree rooted at this node. If less than this, this node will be a
+                leaf.
+            use_stop_conditions (bool, optional): informs wether we should use prunning techniques
+                to avoid using attributes with small number of samples (and, thus, avoiding
+                statistical anomalies). An attribute will be considered invalid if it contains less
+                than `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at
+                least two classes have this number of samples) or if a chi-square test, applied on
+                the attributes' contingency table has a p-value greater or equal to
+                `max_p_value_chi_sq`. When an attribute is considered invalid for the above
+                reasons, this information will be passed to every child node of the current
+                TreeNode. Note that numeric attributes are never tested in this way.Defaults to
+                `False`.
+            max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
+                be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
+                `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
+            is_monte_carlo_criterion (bool, optional): indicates if the splitting criterion uses our
+                Monte Carlo framework. Defaults to `False`.
+            upper_p_value_threshold (float, optional): the p-value-upper-threshold for our Monte
+                Carlo framework. If an attribute has a p-value above this threshold, it will be
+                rejected with probability `prob_monte_carlo`. Defaults to `None`.
+            lower_p_value_threshold (float, optional): the p-value-lower-threshold for our Monte
+                Carlo framework. If an attribute has a p-value below this threshold, it will be
+                accepted with probability `prob_monte_carlo`. Defaults to `None`.
+            prob_monte_carlo (float, optional): the probability of accepting an attribute with
+                p-value smaller than `lower_p_value_threshold` and rejecting an attribute with
+                p-value greater than `upper_p_value_threshold` for our Monte Carlo framework.
+                Defaults to `None`.
+            calculate_expected_tests (bool, optional): indicates wether we should calculate the
+                expected number of tests done by our monte carlo framework. Defaults to `False`.
+        """
         self._use_stop_conditions = use_stop_conditions
+        self._max_p_value_chi_sq = max_p_value_chi_sq
 
         self.is_monte_carlo_criterion = is_monte_carlo_criterion
         self.calculate_expected_tests = calculate_expected_tests
@@ -745,6 +704,7 @@ class TreeNode(object):
         self._min_samples_per_node = min_samples_per_node
 
         self.is_leaf = True
+        self._is_trivial = None
         self.node_split = None
         self.nodes = []
         self.contingency_tables = None
@@ -759,7 +719,6 @@ class TreeNode(object):
         self.class_index_num_samples = [0] * dataset.num_classes
         self.most_common_int_class = None
         self.number_non_empty_classes = 0
-        self.number_samples_in_rarest_class = 0 # only among non-empty classes!
 
         # Fill self.class_index_num_samples
         for sample_index in valid_samples_indices:
@@ -768,17 +727,6 @@ class TreeNode(object):
 
         self.most_common_int_class = self.class_index_num_samples.index(
             max(self.class_index_num_samples))
-
-        # Start self.number_samples_in_rarest_class with a > 0 value and we can only decrease it in
-        # the loop below to a > 0 value.
-        self.number_samples_in_rarest_class = self.class_index_num_samples[
-            self.most_common_int_class]
-        for class_num_samples in self.class_index_num_samples:
-            if class_num_samples > 0:
-                self.number_non_empty_classes += 1
-                if class_num_samples < self.number_samples_in_rarest_class:
-                    self.number_samples_in_rarest_class = class_num_samples
-
         self._calculate_contingency_tables()
 
 
@@ -804,8 +752,7 @@ class TreeNode(object):
 
             self.contingency_tables.append((curr_contingency_table, curr_values_num_samples))
 
-    def _is_attribute_valid(self, attrib_index, min_allowed_in_two_largest,
-                            max_p_value_chi_square_test):
+    def _is_attribute_valid(self, attrib_index, min_allowed_in_two_largest):
         def _get_chi_square_test_p_value(contingency_table, values_num_samples):
             classes_seen = set()
             for value in range(contingency_table.shape[0]):
@@ -845,17 +792,14 @@ class TreeNode(object):
         chi_square_test_p_value = _get_chi_square_test_p_value(
             self.contingency_tables[attrib_index][0],
             self.contingency_tables[attrib_index][1])
-        return chi_square_test_p_value < max_p_value_chi_square_test
+        return chi_square_test_p_value < self._max_p_value_chi_sq
 
-    def create_subtree(self, criterion, max_p_value=None):
-        '''Given the splitting criterion, creates a tree rooted at the current TreeNode.
+    def create_subtree(self, criterion):
+        """Given the splitting criterion, creates a tree rooted at the current TreeNode.
 
-        Arguments:
+        Args:
             criterion (Criterion): splitting criterion used to create the tree recursively.
-            max_p_value (float, optional): Maximum p-value to be used for max cut methods with
-                Janson bounds (values larger than this makes the current node a leaf). Defaults to
-                `None`.
-        '''
+        """
 
         def _get_values_to_split(splits_values):
             values_to_split = {}
@@ -907,8 +851,7 @@ class TreeNode(object):
                 if is_valid_nominal_attribute:
                     if (self._is_attribute_valid(
                             attrib_index,
-                            min_allowed_in_two_largest=MIN_ALLOWED_IN_TWO_LARGEST,
-                            max_p_value_chi_square_test=MAX_P_VALUE_CHI_SQUARE_TEST)):
+                            min_allowed_in_two_largest=MIN_ALLOWED_IN_TWO_LARGEST)):
                         num_valid_attributes += 1
                     else:
                         new_valid_nominal_attribute[attrib_index] = False
@@ -940,15 +883,14 @@ class TreeNode(object):
         else:
             self.total_expected_num_tests = 0.0
 
-        # Get best split
+        # Get best split. Note that self is the current TreeNode.
         (separation_attrib_index,
          splits_values,
-         criterion_value,
-         p_value) = criterion.select_best_attribute_and_split(self, # self is the current TreeNode
-                                                              num_tests,
-                                                              num_fails_allowed)
+         criterion_value) = criterion.select_best_attribute_and_split(self,
+                                                                      num_tests,
+                                                                      num_fails_allowed)
 
-        if math.isinf(criterion_value) or (max_p_value is not None and p_value > max_p_value):
+        if math.isinf(criterion_value):
             # Stop condition for Max Cut tree: above p_value or no valid attribute index with more
             # than one value (then criterion_value is default, which is +- inf).
             return None
@@ -967,9 +909,7 @@ class TreeNode(object):
             self.node_split = NodeSplit(separation_attrib_index,
                                         None,
                                         None,
-                                        criterion,
                                         criterion_value,
-                                        p_value,
                                         mid_point)
 
         else:
@@ -988,9 +928,7 @@ class TreeNode(object):
             self.node_split = NodeSplit(separation_attrib_index,
                                         splits_values,
                                         values_to_split,
-                                        criterion,
-                                        criterion_value,
-                                        p_value)
+                                        criterion_value)
 
         # Create subtrees
         self.is_leaf = False
@@ -1007,54 +945,52 @@ class TreeNode(object):
                                        self.prob_monte_carlo,
                                        self.calculate_expected_tests))
 
-            self.nodes[-1].create_subtree(criterion, max_p_value)
+            self.nodes[-1].create_subtree(criterion)
 
     def get_most_popular_subtree(self):
-        '''Returns the number of samples in the most popular subtree. It should NOT be called in a
-        leaf node (otherwise the program will exit).'''
+        """Returns the number of samples in the most popular subtree. It should NOT be called in a
+        leaf node (otherwise the program will exit)."""
         return max(subtree.num_valid_samples for subtree in self.nodes)
 
     def get_subtree_time_num_tests_fails(self):
-        '''Returns the total time taken to calculate the number of tests and fails allowed at each
-        node in this subtree (including the current TreeNode).'''
+        """Returns the total time taken to calculate the number of tests and fails allowed at each
+        node in this subtree (including the current TreeNode)."""
         if self.is_leaf:
             return self.time_num_tests_fails
         return sum(subtree.get_subtree_time_num_tests_fails() for subtree in self.nodes)
 
     def get_subtree_time_expected_tests(self):
-        '''Returns the total time taken to calculate the total expected number of tests at each node
-        in this subtree (including the current TreeNode).'''
+        """Returns the total time taken to calculate the total expected number of tests at each node
+        in this subtree (including the current TreeNode)."""
         if self.is_leaf:
             return self.time_expected_tests
         return sum(subtree.get_subtree_time_expected_tests() for subtree in self.nodes)
 
-    def is_trivial(self):
-        '''Returns a bool indicating if every leaf in the tree starting at TreeNode has the same
-        classification. In other words, informs wether we could remove this whole tree and make the
-        current TreeNode a leaf, without changing the classifications' outcomes.'''
-        def _has_different_class(node, first_class_seen):
-            if node.is_leaf:
-                return node.most_common_int_class != first_class_seen
-            for child_subtree in node.nodes:
-                if _has_different_class(child_subtree, first_class_seen):
-                    return True
-            return False
+    def prune_trivial_subtrees(self):
+        """Applies prunning to an already trained tree.
 
-        if self.is_leaf:
-            return True
-        first_class_seen = None
-        curr_node = self
-        while not curr_node.is_leaf:
-            curr_node = curr_node.nodes[0]
-        first_class_seen = curr_node.most_common_int_class
-        return not _has_different_class(self, first_class_seen)
+        If a TreeNode is trivial, that is, every leaf in its subtree has the same
+        `most_common_int_class`, then the current TreeNode becomes a leaf with this class, deleting
+        every child node in this process. Is applied recursively.
+        """
+        if not self.is_leaf:
+            children_classes = set()
+            num_trivial_children = 0
+            for child_node in self.nodes:
+                child_node.prune_trivial_subtrees()
+                if child_node.is_leaf:
+                    num_trivial_children += 1
+                    children_classes.add(child_node.most_common_int_class)
+            if num_trivial_children == len(self.nodes) and len(children_classes) == 1:
+                self.is_leaf = True
+                self.nodes = []
 
     def get_nodes_infos(self, max_depth=3):
-        '''Get information about nodes in the tree, up to `max_depth`.
+        """Get information about nodes in the tree, up to `max_depth`.
 
         Used in some experiments to see which splits are obtained using different criteria.
 
-        Arguments:
+        Args:
             max_depth (int, optional): Maximum depth to which we want information about every node.
                 Defaults to `3`.
 
@@ -1063,22 +999,22 @@ class TreeNode(object):
                 - A list containing the NodeSplit's for every node starting at the current TreeNode
                     all the way to `max_depth` depth;
                 - the number of nodes in the tree rooted at the current NodeSplit.
-        '''
+        """
         return [self.get_nodes_attributes(max_depth), self.get_num_nodes()]
 
     def get_nodes_attributes(self, max_depth_remaining=3):
-        ''' Get information about nodes in the tree, up to `max_depth`.
+        """ Get information about nodes in the tree, up to `max_depth`.
 
         Used in some experiments to see which splits are obtained using different criteria.
 
-        Arguments:
+        Args:
             max_depth (int, optional): Maximum depth to which we want information about every node.
                 Defaults to `3`.
 
         Returns:
             A list containing the NodeSplit's for every node starting at the current TreeNode all
             the way to `max_depth` depth.
-        '''
+        """
         def _get_info_aux(node, max_depth_remaining, ret):
             if max_depth_remaining == 0:
                 return
@@ -1088,7 +1024,7 @@ class TreeNode(object):
             max_split_ratio = node.get_most_popular_subtree() / node.num_valid_samples
             ret.append((node.node_split.separation_attrib_index,
                         max_split_ratio,
-                        self.is_trivial()))
+                        self.is_leaf))
             _get_info_aux(node.nodes[0], max_depth_remaining - 1, ret)
             _get_info_aux(node.nodes[1], max_depth_remaining - 1, ret)
 
@@ -1097,16 +1033,16 @@ class TreeNode(object):
         return ret
 
     def get_num_nodes(self):
-        '''Returns the number of nodes in the tree rooted at the current TreeNode (counting includes
-        leaves and the current TreeNode).'''
+        """Returns the number of nodes in the tree rooted at the current TreeNode (counting includes
+        leaves and the current TreeNode)."""
         num_nodes = 1
         for child_node in self.nodes:
             num_nodes += child_node.get_num_nodes()
         return num_nodes
 
     def get_max_depth(self):
-        '''Returns the maximum depth of the tree rooted at the current TreeNode. If the current node
-        is a leaf, it will return zero.'''
+        """Returns the maximum depth of the tree rooted at the current TreeNode. If the current node
+        is a leaf, it will return zero."""
         if self.is_leaf:
             return 0
         ret = 0
@@ -1122,22 +1058,6 @@ class NodeSplit(object):
 
     Used for debugging and for the classification of test samples.
 
-    Args:
-        separation_attrib_index (int): Index of the attribute used for splitting.
-        splits_values (:obj:'list' of 'set' of 'int'): list containing a set of attribute values for
-            each TreeNode child. Binary splits have two sets (left and right split values), multiway
-            splits may have many more.
-        values_to_split (:obj:'dict' of 'int'): reversed index for `splits_values`. Given a value,
-            it returns the index of the split that this value belongs to.
-        criterion (Criterion): criterion used to generate the current split.
-        criterion_value (float): optimal criterion value obtained for this TreeNode.
-        p_value (float): split p-value according to Janson theorem. Used only for some max cut
-            criteria. Defaults to `None`.
-        mid_point (float): cut point for numeric splits. Will be the average between the largest
-            value on the left split and the smallest value on the right split. Not used for splits
-            that use nominal attributes. Defaults to `None`.
-
-
     Attributes:
         separation_attrib_index (int): Index of the attribute used for splitting.
         splits_values (:obj:'list' of 'set' of 'int'): list containing a set of attribute values for
@@ -1145,76 +1065,29 @@ class NodeSplit(object):
             splits may have many more.
         values_to_split (:obj:'dict' of 'int'): reversed index for `splits_values`. Given a value,
             it returns the index of the split that this value belongs to.
+        criterion_value (float): criterion value for this split.
         mid_point (float): cut point for numeric splits. Will be the average between the largest
             value on the left split and the smallest value on the right split.
-        gini_value (float): criterion value for this split. It is used by every criterion that is
-            not a max cut one, and not only by gini.
-        cut_gain (float): criterion value for this split. It is only used by max cut criteria.
-        p_value (float): split p-value according to Janson theorem. Used only for some max cut
-            criteria.
     """
-    def __init__(self, separation_attrib_index, splits_values, values_to_split, criterion,
-                 criterion_value, p_value=None, mid_point=None):
+    def __init__(self, separation_attrib_index, splits_values, values_to_split, criterion_value,
+                 mid_point=None):
+        """Initializes a TreeNode instance with the given arguments.
+
+        Args:
+            separation_attrib_index (int): Index of the attribute used for splitting.
+            splits_values (:obj:'list' of 'set' of 'int'): list containing a set of attribute values
+                for each TreeNode child. Binary splits have two sets (left and right split values),
+                multiway splits may have many more.
+            values_to_split (:obj:'dict' of 'int'): reversed index for `splits_values`. Given a
+                value, it returns the index of the split that this value belongs to.
+            criterion_value (float): optimal criterion value obtained for this TreeNode.
+            mid_point (float, optional): cut point for numeric splits. Will be the average between
+                the largest value on the left split and the smallest value on the right split. Not
+                used for splits that use nominal attributes. Defaults to `None`.
+        """
         #TESTED!
         self.separation_attrib_index = separation_attrib_index
         self.splits_values = splits_values
         self.values_to_split = values_to_split
+        self.criterion_value = criterion_value
         self.mid_point = mid_point
-        if criterion.name == 'Gini Index':
-            self.gini_value = criterion_value
-        elif criterion.name == 'Gini Twoing':
-            self.gini_value = criterion_value
-        elif criterion.name == 'Gini Twoing Monte Carlo':
-            self.gini_value = criterion_value
-        elif criterion.name == 'Twoing':
-            self.gini_value = criterion_value
-        elif criterion.name == 'ORT':
-            self.gini_value = criterion_value
-        elif criterion.name == 'MPI':
-            self.gini_value = criterion_value
-        elif criterion.name == 'Max Cut Exact':
-            self.gini_value = criterion_value
-        elif criterion.name == 'Max Cut Exact Chi Square':
-            self.gini_value = criterion_value
-        elif criterion.name == 'Max Cut Exact Chi Square Heuristic':
-            self.gini_value = criterion_value
-        elif criterion.name == 'Max Cut Exact Residue':
-            self.gini_value = criterion_value
-        elif criterion.name == 'Gain Ratio':
-            self.sep_gain = criterion_value
-        elif criterion.name == 'Max Cut':
-            self.cut_gain = criterion_value
-            self.p_value = p_value
-        elif criterion.name == 'Max Cut Naive':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Max Cut Naive With Local Search':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Fast Max Cut Naive':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Max Cut Naive Residue':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Max Cut Naive Chi Square':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Max Cut Naive Chi Square With Local Search':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Fast Max Cut Chi Square':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Max Cut Naive Chi Square Normalized':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Max Cut Naive Chi Square Normalized With Local Search':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Fast Max Cut Chi Square Normalized':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Fast Max Cut Chi Square Normalized P Value':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Fast Max Cut Chi Square Normalized P Value M C':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Max Cut Naive Chi Square Heuristic':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Max Cut Monte Carlo':
-            self.cut_gain = criterion_value
-        elif criterion.name == 'Max Cut Monte Carlo Residue':
-            self.cut_gain = criterion_value
-        else:
-            print('NodeSplit with unknown criterion name: {}'.format(criterion.name))
-            sys.exit(1)

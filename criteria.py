@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-'''Module containing all criteria available for tests.
-'''
+"""Module containing all criteria available for tests.
+"""
 
 import abc
 import itertools
@@ -25,7 +25,7 @@ class Criterion(object):
     @classmethod
     @abc.abstractmethod
     def select_best_attribute_and_split(cls, tree_node, num_tests=0, num_fails_allowed=0):
-        '''Returns the best attribute and its best split, according to the criterion, using
+        """Returns the best attribute and its best split, according to the criterion, using
         `num_tests` tests per attribute and accepting if it doesn't fail more than
         `num_fails_allowed` times.
 
@@ -35,7 +35,7 @@ class Criterion(object):
             our Monte Carlo framework. Defaults to `0`.
           num_fails_allowed (int, optional): maximum number of fails allowed for an attribute to be
             accepted according to our Monte Carlo framework. Defaults to `0`.
-        '''
+        """
         # returns (separation_attrib_index, splits_values, criterion_value)
         pass
 

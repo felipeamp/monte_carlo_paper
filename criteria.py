@@ -36,7 +36,7 @@ class Criterion(object):
           num_fails_allowed (int, optional): maximum number of fails allowed for an attribute to be
             accepted according to our Monte Carlo framework. Defaults to `0`.
         '''
-        # returns (separation_attrib_index, splits_values, criterion_value, p_value)
+        # returns (separation_attrib_index, splits_values, criterion_value)
         pass
 
 

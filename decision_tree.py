@@ -43,7 +43,6 @@ class DecisionTree(object):
                 p-value greater than `upper_p_value_threshold` for our Monte Carlo framework.
                 Defaults to `None`.
         """
-        #TESTED!
         self._criterion = criterion
         self._dataset = None
         self._root_node = None
@@ -68,7 +67,6 @@ class DecisionTree(object):
         return self._root_node.get_subtree_time_expected_tests()
 
     def _classify_sample(self, sample, sample_key):
-        #TESTED!
         if self._root_node is None:
             print('Cannot classify in untrained tree!')
             sys.exit(1)
@@ -179,7 +177,6 @@ class DecisionTree(object):
                 be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
         """
-        #TESTED!
         self._dataset = dataset
         print('Starting tree training...')
         self._root_node = TreeNode(dataset,
@@ -836,12 +833,23 @@ class TreeNode(object):
                     splits_samples_indices[1].append(sample_index)
             return splits_samples_indices
 
+        def _has_multiple_values(values_num_samples):
+            return sum(num_samples > 0 for num_samples in values_num_samples) > 1
+
+
 
         # Is it time to stop growing subtrees?
         if (self.max_depth_remaining <= 0
                 or self.num_valid_samples < self._min_samples_per_node
                 or self.number_non_empty_classes == 1):
             return None
+
+        # If a valid attribute has only one value, it should be marked as invalid from this node on.
+        for attrib_index in range(len(self.valid_nominal_attribute)):
+            if not self.valid_nominal_attribute[attrib_index]:
+                continue
+            if not _has_multiple_values(self.contingency_tables[attrib_index][1]):
+                self.valid_nominal_attribute[attrib_index] = False
 
         if self._use_stop_conditions:
             num_valid_attributes = sum(self.dataset.valid_numeric_attribute)
@@ -1085,7 +1093,6 @@ class NodeSplit(object):
                 the largest value on the left split and the smallest value on the right split. Not
                 used for splits that use nominal attributes. Defaults to `None`.
         """
-        #TESTED!
         self.separation_attrib_index = separation_attrib_index
         self.splits_values = splits_values
         self.values_to_split = values_to_split

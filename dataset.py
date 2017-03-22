@@ -302,10 +302,8 @@ class Dataset(object):
             split_char (str): char used to split columns in the csv.
             missing_value_string (str): string used to indicate that a sample does not have a value.
         """
-        #TESTED!
         def _is_header_match(train_attrib_names, test_attrib_names):
             """Tests wether both headers are the same (up to lower/uppercase)."""
-            #TESTED!
             if len(train_attrib_names) != len(test_attrib_names):
                 return False
             for curr_train_attrib_name, curr_test_attrib_name in zip(train_attrib_names,

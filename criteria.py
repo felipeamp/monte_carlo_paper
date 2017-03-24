@@ -470,43 +470,44 @@ class Twoing(Criterion):
                 best_splits_per_attrib.append((attrib_index,
                                                [best_left_values, best_right_values],
                                                best_total_gini_index))
-                if num_tests == 0: # Just return attribute/split with maximum criterion value.
-                    max_criterion_value = float('-inf')
-                    best_attribute_and_split = (None, [], float('-inf'))
-                    for best_attrib_split in best_splits_per_attrib:
-                        criterion_value = best_attrib_split[2]
-                        if criterion_value > max_criterion_value:
-                            max_criterion_value = criterion_value
-                            best_attribute_and_split = best_attrib_split
-                    num_monte_carlo_tests_needed = 0
-                    position_of_accepted = 1
-                    return (*best_attribute_and_split,
-                            num_monte_carlo_tests_needed,
-                            position_of_accepted)
-                else: # use Monte Carlo approach.
-                    best_splits_per_attrib = _remove_duplicate_attributes(
-                        best_splits_per_attrib,
-                        len(tree_node.valid_nominal_attribute))
-                    if ORDER_RANDOMLY:
-                        random.shuffle(best_splits_per_attrib)
-                    else:
-                        best_splits_per_attrib = sorted(best_splits_per_attrib, key=lambda x: -x[2])
+        if num_tests == 0: # Just return attribute/split with maximum criterion value.
+            max_criterion_value = float('-inf')
+            best_attribute_and_split = (None, [], float('-inf'))
+            for best_attrib_split in best_splits_per_attrib:
+                criterion_value = best_attrib_split[2]
+                if criterion_value > max_criterion_value:
+                    max_criterion_value = criterion_value
+                    best_attribute_and_split = best_attrib_split
+            num_monte_carlo_tests_needed = 0
+            position_of_accepted = 1
+            return (*best_attribute_and_split,
+                    num_monte_carlo_tests_needed,
+                    position_of_accepted)
+        else: # use Monte Carlo approach.
+            best_splits_per_attrib = _remove_duplicate_attributes(
+                best_splits_per_attrib,
+                len(tree_node.valid_nominal_attribute))
+            if ORDER_RANDOMLY:
+                random.shuffle(best_splits_per_attrib)
+            else:
+                best_splits_per_attrib = sorted(best_splits_per_attrib, key=lambda x: -x[2])
 
-                    total_num_tests_needed = 0
-                    for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
-                        (should_accept,
-                         num_tests_needed) = cls._accept_attribute(
-                             best_attrib_split[2],
-                             num_tests,
-                             len(tree_node.valid_samples_indices),
-                             tree_node.class_index_num_samples,
-                             tree_node.contingency_tables[attrib_index][0],
-                             tree_node.contingency_tables[attrib_index][1],
-                             num_fails_allowed)
-                        total_num_tests_needed += num_tests_needed
-                        if should_accept:
-                            return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
-                    return (None, [], float('-inf'), total_num_tests_needed, None)
+            total_num_tests_needed = 0
+            for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
+                attrib_index, _, criterion_value = best_attrib_split[0]
+                (should_accept,
+                 num_tests_needed) = cls._accept_attribute(
+                     criterion_value,
+                     num_tests,
+                     len(tree_node.valid_samples_indices),
+                     tree_node.class_index_num_samples,
+                     tree_node.contingency_tables[attrib_index][0],
+                     tree_node.contingency_tables[attrib_index][1],
+                     num_fails_allowed)
+                total_num_tests_needed += num_tests_needed
+                if should_accept:
+                    return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
+            return (None, [], float('-inf'), total_num_tests_needed, None)
 
     @staticmethod
     def _get_values_seen(values_num_samples):

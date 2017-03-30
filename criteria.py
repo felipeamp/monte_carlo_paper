@@ -54,10 +54,8 @@ class GiniIndex(Criterion):
     name = 'Gini Index'
 
     # TODO: Implement function _accept_attribute
-    # TODO: Add function _remove_duplicate_attributes 
     @classmethod
     def select_best_attribute_and_split(cls, tree_node, num_tests=0, num_fails_allowed=0):
-
         # Instead of using original_total_gini_index = (
         # gini_index(all_samples_in_tree_node)
         # - ((len(samples_in_left_node)/len(all_samples_in_tree_node))
@@ -71,6 +69,18 @@ class GiniIndex(Criterion):
         # Since total_gini_index above is always non-negative and <= 2 (because gini_index is
         # always non-negative and <= 1.0), the starting value below will be replaced in the for
         # loop.
+
+        def _remove_duplicate_attributes(best_splits_per_attrib, num_attributes):
+            seen_attrib = [False] * num_attributes
+            ret = []
+            for best_attrib_split in best_splits_per_attrib:
+                curr_attrib_index = best_attrib_split[0]
+                if seen_attrib[curr_attrib_index]:
+                    continue
+                seen_attrib[curr_attrib_index] = True
+                ret.append(best_attrib_split)
+            return ret
+
         best_splits_per_attrib = []
 
         for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
@@ -144,6 +154,9 @@ class GiniIndex(Criterion):
                     num_monte_carlo_tests_needed,
                     position_of_accepted)
         else: # use Monte Carlo approach.
+            best_splits_per_attrib = _remove_duplicate_attributes(
+                best_splits_per_attrib,
+                len(tree_node.valid_nominal_attribute))
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
@@ -334,6 +347,37 @@ class GiniIndex(Criterion):
         right_split_gini_index = cls._calculate_gini_index(right_num, class_num_right)
         total_gini_index = left_num * left_split_gini_index + right_num * right_split_gini_index
         return total_gini_index
+
+    @staticmethod
+    def _get_classes_dist(contingency_table, values_num_samples, num_valid_samples):
+        num_classes = contingency_table.shape[1]
+        classes_dist = [0] * num_classes
+        for value, value_num_samples in enumerate(values_num_samples):
+            if value_num_samples == 0:
+                continue
+            for class_index, num_samples in enumerate(contingency_table[value, :]):
+                if num_samples > 0:
+                    classes_dist[class_index] += num_samples
+        for class_index in range(num_classes):
+            classes_dist[class_index] /= float(num_valid_samples)
+        return classes_dist
+
+    @staticmethod
+    def _generate_random_contingency_table(classes_dist, num_valid_samples, values_num_samples):
+        # TESTED!
+        random_classes = np.random.choice(len(classes_dist),
+                                          num_valid_samples,
+                                          replace=True,
+                                          p=classes_dist)
+        random_contingency_table = np.zeros((values_num_samples.shape[0], len(classes_dist)),
+                                            dtype=float)
+        samples_done = 0
+        for value, value_num_samples in enumerate(values_num_samples):
+            if value_num_samples > 0:
+                for class_index in random_classes[samples_done: samples_done + value_num_samples]:
+                    random_contingency_table[value, class_index] += 1
+                samples_done += value_num_samples
+        return random_contingency_table
 
 
 

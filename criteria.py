@@ -44,32 +44,20 @@ class Criterion(object):
 #################################################################################################
 #################################################################################################
 ###                                                                                           ###
-###                                       GINI INDEX                                          ###
+###                                        GINI GAIN                                          ###
 ###                                                                                           ###
 #################################################################################################
 #################################################################################################
 
 
-class GiniIndex(Criterion):
-    name = 'Gini Index'
+class GiniGain(Criterion):
+    name = 'Gini Gain'
 
-    # TODO: Implement function _accept_attribute
     @classmethod
     def select_best_attribute_and_split(cls, tree_node, num_tests=0, num_fails_allowed=0):
-        # Instead of using original_total_gini_index = (
-        # gini_index(all_samples_in_tree_node)
-        # - ((len(samples_in_left_node)/len(all_samples_in_tree_node))
-        #    * gini_index(samples_in_left_node))
-        # - ((len(samples_in_right_node)/len(all_samples_in_tree_node))
-        #    * gini_index(samples_in_right_node))
-        # and trying to maximize it, we'll try to minimize
-        # total_gini_index = (len(samples_in_left_node) * gini_index(samples_in_left_node)
-        #                     + len(samples_in_left_node) * gini_index(samples_in_right_node))
-
-        # Since total_gini_index above is always non-negative and <= 2 (because gini_index is
-        # always non-negative and <= 1.0), the starting value below will be replaced in the for
-        # loop.
-
+        # Instead of minimizing the difference between the Gini Index in the current
+        # TreeNode minus the weighted Gini Index of its child TreeNode's, we just maximize
+        # the weighted Gini Index of its children.
         def _remove_duplicate_attributes(best_splits_per_attrib, num_attributes):
             seen_attrib = [False] * num_attributes
             ret = []
@@ -82,7 +70,7 @@ class GiniIndex(Criterion):
             return ret
 
         best_splits_per_attrib = []
-
+        has_exactly_two_classes = tree_node.number_non_empty_classes == 2
         for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
             if is_valid_attrib:
                 values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
@@ -101,7 +89,7 @@ class GiniIndex(Criterion):
                         len(values_seen)))
                     print("It will be skipped!")
                     continue
-                if tree_node.number_non_empty_classes == 2:
+                if has_exactly_two_classes:
                     (curr_total_gini_index,
                      left_values,
                      right_values) = cls._two_class_trick(
@@ -169,11 +157,11 @@ class GiniIndex(Criterion):
                  num_tests_needed) = cls._accept_attribute(
                      criterion_value,
                      num_tests,
+                     num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[attrib_index][0],
                      tree_node.contingency_tables[attrib_index][1],
-                     num_fails_allowed)
+                     has_exactly_two_classes)
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
                     return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
@@ -349,20 +337,6 @@ class GiniIndex(Criterion):
         return total_gini_index
 
     @staticmethod
-    def _get_classes_dist(contingency_table, values_num_samples, num_valid_samples):
-        num_classes = contingency_table.shape[1]
-        classes_dist = [0] * num_classes
-        for value, value_num_samples in enumerate(values_num_samples):
-            if value_num_samples == 0:
-                continue
-            for class_index, num_samples in enumerate(contingency_table[value, :]):
-                if num_samples > 0:
-                    classes_dist[class_index] += num_samples
-        for class_index in range(num_classes):
-            classes_dist[class_index] /= float(num_valid_samples)
-        return classes_dist
-
-    @staticmethod
     def _generate_random_contingency_table(classes_dist, num_valid_samples, values_num_samples):
         # TESTED!
         random_classes = np.random.choice(len(classes_dist),
@@ -379,6 +353,55 @@ class GiniIndex(Criterion):
                 samples_done += value_num_samples
         return random_contingency_table
 
+    @classmethod
+    def _accept_attribute(cls, real_gini, num_tests, num_fails_allowed, num_valid_samples,
+                          class_index_num_samples, values_num_samples, has_exactly_two_classes):
+        values_seen = cls._get_values_seen(values_num_samples)
+        num_classes = len(class_index_num_samples)
+
+        classes_dist = class_index_num_samples[:]
+        for class_index in range(num_classes):
+            classes_dist[class_index] /= float(num_valid_samples)
+
+        num_fails_seen = 0
+        for test_number in range(1, num_tests + 1):
+            random_contingency_table = cls._generate_random_contingency_table(
+                classes_dist,
+                num_valid_samples,
+                values_num_samples)
+
+            best_gini_found = float('-inf')
+            if has_exactly_two_classes:
+                (best_gini_found, _, _) = cls._two_class_trick(
+                    class_index_num_samples,
+                    values_seen,
+                    values_num_samples,
+                    random_contingency_table,
+                    num_valid_samples)
+            else:
+                for (_, _, left_num,
+                     class_num_left,
+                     right_num,
+                     class_num_right) in cls._generate_possible_splits(
+                         values_num_samples,
+                         values_seen,
+                         random_contingency_table,
+                         num_classes):
+                    curr_total_gini_index = cls._calculate_total_gini_index(
+                        left_num,
+                        class_num_left,
+                        right_num,
+                        class_num_right)
+                    if curr_total_gini_index < best_gini_found:
+                        best_gini_found = curr_total_gini_index
+
+            if best_gini_found > real_gini:
+                num_fails_seen += 1
+                if num_fails_seen > num_fails_allowed:
+                    return False, test_number
+            if num_tests - test_number <= num_fails_allowed - num_fails_seen:
+                return True, None
+        return True, None
 
 
 #################################################################################################

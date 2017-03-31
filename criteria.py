@@ -517,11 +517,10 @@ class Twoing(Criterion):
                  num_tests_needed) = cls._accept_attribute(
                      criterion_value,
                      num_tests,
+                     num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[attrib_index][0],
-                     tree_node.contingency_tables[attrib_index][1],
-                     num_fails_allowed)
+                     tree_node.contingency_tables[attrib_index][1])
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
                     return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
@@ -702,20 +701,6 @@ class Twoing(Criterion):
         return total_gini_index
 
     @staticmethod
-    def _get_classes_dist(contingency_table, values_num_samples, num_valid_samples):
-        num_classes = contingency_table.shape[1]
-        classes_dist = [0] * num_classes
-        for value, value_num_samples in enumerate(values_num_samples):
-            if value_num_samples == 0:
-                continue
-            for class_index, num_samples in enumerate(contingency_table[value, :]):
-                if num_samples > 0:
-                    classes_dist[class_index] += num_samples
-        for class_index in range(num_classes):
-            classes_dist[class_index] /= float(num_valid_samples)
-        return classes_dist
-
-    @staticmethod
     def _generate_random_contingency_table(classes_dist, num_valid_samples, values_num_samples):
         # TESTED!
         random_classes = np.random.choice(len(classes_dist),
@@ -733,12 +718,15 @@ class Twoing(Criterion):
         return random_contingency_table
 
     @classmethod
-    def _accept_attribute(cls, real_gini, num_tests, num_valid_samples, class_index_num_samples,
-                          contingency_table, values_num_samples, num_fails_allowed):
-        values_seen = cls._get_values_seen(values_num_samples),
-        classes_dist = cls._get_classes_dist(contingency_table,
-                                             values_num_samples,
-                                             num_valid_samples)
+    def _accept_attribute(cls, real_gini, num_tests, num_fails_allowed, num_valid_samples,
+                          class_index_num_samples, values_num_samples):
+        values_seen = cls._get_values_seen(values_num_samples)
+
+        num_classes = len(class_index_num_samples)
+        classes_dist = class_index_num_samples[:]
+        for class_index in range(num_classes):
+            classes_dist[class_index] /= float(num_valid_samples)
+
         num_fails_seen = 0
         for test_number in range(1, num_tests + 1):
             random_contingency_table = cls._generate_random_contingency_table(

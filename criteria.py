@@ -74,8 +74,8 @@ class GiniGain(Criterion):
             if is_valid_attrib:
                 values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
                 if (len(values_seen) > LOG2_LIMIT_EXPONENTIAL_STEPS or
-                      (tree_node.number_non_empty_classes
-                       * len(values_seen) * 2**len(values_seen)) > LIMIT_EXPONENTIAL_STEPS):
+              		(tree_node.number_non_empty_classes
+                    * len(values_seen) * 2**len(values_seen)) > LIMIT_EXPONENTIAL_STEPS):
                     print("Attribute {} ({}) is valid but has too many values ({}).".format(
                         attrib_index,
                         tree_node.dataset.attrib_names[attrib_index],
@@ -888,7 +888,7 @@ class GainRatio(Criterion):
     @classmethod
     def _accept_attribute(cls, real_gain_ratio, num_tests, num_fails_allowed, num_valid_samples,
                           class_index_num_samples, values_num_samples, original_information):
-        values_seen = cls._get_values_seen(values_num_samples)
+        # values_seen = cls._get_values_seen(values_num_samples) not being used, is there any reason for it to be here?
         num_classes = len(class_index_num_samples)
 
         classes_dist = class_index_num_samples[:]

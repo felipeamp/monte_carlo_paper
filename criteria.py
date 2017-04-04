@@ -55,6 +55,31 @@ class GiniGain(Criterion):
 
     @classmethod
     def select_best_attribute_and_split(cls, tree_node, num_tests=0, num_fails_allowed=0):
+        """Returns the best attribute and its best split, according to the Gini Gain criterion,
+        using `num_tests` tests per attribute and accepting if it doesn't fail more than
+        `num_fails_allowed` times. If `num_tests` is zero, returns the attribute/split with
+        the largest criterion value.
+
+        Args:
+          tree_node (TreeNode): tree node where we want to find the best attribute/split.
+          num_tests (int, optional): number of tests to be executed in each attribute, according to
+            our Monte Carlo framework. Defaults to `0`.
+          num_fails_allowed (int, optional): maximum number of fails allowed for an attribute to be
+            accepted according to our Monte Carlo framework. Defaults to `0`.
+
+        Returns:
+            A tuple cointaining, in order:
+                - the index of the accepted attribute;
+                - a list of sets, each containing the values that should go to that split/subtree.
+                If the split is done in a numeric attribute, it contains only two sets: one
+                containing only the largest value of the left split, and the other with the smallest
+                value of the right split;
+                -  Split value according to the criterion. If no attribute has a valid split, this
+                value should be `float('-inf')`.
+                - Total number of Monte Carlo tests needed;
+                - Position of the accepted attribute in the attributes' list ordered by the
+                criterion value.
+        """
         # Instead of minimizing the difference between the Gini Index in the current
         # TreeNode minus the weighted Gini Index of its child TreeNode's, we just maximize
         # the weighted Gini Index of its children.
@@ -62,8 +87,8 @@ class GiniGain(Criterion):
             seen_attrib = [False] * num_attributes
             ret = []
             for best_attrib_split in best_splits_per_attrib:
-                curr_attrib_index = best_attrib_split[0]
-                if seen_attrib[curr_attrib_index]:
+                curr_attrib_index, _, curr_criterion_value = best_attrib_split
+                if seen_attrib[curr_attrib_index] or curr_criterion_value == float('-inf'):
                     continue
                 seen_attrib[curr_attrib_index] = True
                 ret.append(best_attrib_split)
@@ -71,18 +96,18 @@ class GiniGain(Criterion):
 
         best_splits_per_attrib = []
         has_exactly_two_classes = tree_node.number_non_empty_classes == 2
+        cache_values_seen = []
         for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
-            if is_valid_attrib:
-                values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
-                if len(values_seen) <= 1:
-                    print("Attribute {} ({}) is valid but has only {} value(s).".format(
-                        attrib_index,
-                        tree_node.dataset.attrib_names[attrib_index],
-                        len(values_seen)))
-                    continue
-                elif (len(values_seen) > LOG2_LIMIT_EXPONENTIAL_STEPS or
-                      (tree_node.number_non_empty_classes
-                       * len(values_seen) * 2**len(values_seen)) > LIMIT_EXPONENTIAL_STEPS):
+            if not is_valid_attrib:
+                cache_values_seen.append(None)
+                continue
+            else:
+                cache_values_seen.append(cls._get_values_seen(
+                    tree_node.contingency_tables[attrib_index][1]))
+                values_seen = cache_values_seen[attrib_index]
+                if (len(values_seen) > LOG2_LIMIT_EXPONENTIAL_STEPS or
+                        (tree_node.number_non_empty_classes
+                         * len(values_seen) * 2**len(values_seen)) > LIMIT_EXPONENTIAL_STEPS):
                     print("Attribute {} ({}) is valid but has too many values ({}).".format(
                         attrib_index,
                         tree_node.dataset.attrib_names[attrib_index],
@@ -120,7 +145,7 @@ class GiniGain(Criterion):
                             class_num_left,
                             right_num,
                             class_num_right)
-                        if curr_total_gini_index < best_total_gini_index:
+                        if curr_total_gini_index > best_total_gini_index:
                             best_total_gini_index = curr_total_gini_index
                             best_left_values = left_values
                             best_right_values = right_values
@@ -152,7 +177,7 @@ class GiniGain(Criterion):
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
-                attrib_index, _, criterion_value = best_attrib_split[0]
+                attrib_index, _, criterion_value = best_attrib_split
                 (should_accept,
                  num_tests_needed) = cls._accept_attribute(
                      criterion_value,
@@ -161,7 +186,8 @@ class GiniGain(Criterion):
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
                      tree_node.contingency_tables[attrib_index][1],
-                     has_exactly_two_classes)
+                     has_exactly_two_classes,
+                     cache_values_seen[attrib_index])
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
                     return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
@@ -355,8 +381,8 @@ class GiniGain(Criterion):
 
     @classmethod
     def _accept_attribute(cls, real_gini, num_tests, num_fails_allowed, num_valid_samples,
-                          class_index_num_samples, values_num_samples, has_exactly_two_classes):
-        values_seen = cls._get_values_seen(values_num_samples)
+                          class_index_num_samples, values_num_samples, has_exactly_two_classes,
+                          values_seen):
         num_classes = len(class_index_num_samples)
 
         classes_dist = class_index_num_samples[:]
@@ -370,7 +396,6 @@ class GiniGain(Criterion):
                 num_valid_samples,
                 values_num_samples)
 
-            best_gini_found = float('-inf')
             if has_exactly_two_classes:
                 (best_gini_found, _, _) = cls._two_class_trick(
                     class_index_num_samples,
@@ -379,6 +404,7 @@ class GiniGain(Criterion):
                     random_contingency_table,
                     num_valid_samples)
             else:
+                best_gini_found = float('-inf')
                 for (_, _, left_num,
                      class_num_left,
                      right_num,
@@ -447,20 +473,26 @@ class Twoing(Criterion):
             seen_attrib = [False] * num_attributes
             ret = []
             for best_attrib_split in best_splits_per_attrib:
-                curr_attrib_index = best_attrib_split[0]
-                if seen_attrib[curr_attrib_index]:
+                curr_attrib_index, _, curr_criterion_value = best_attrib_split
+                if seen_attrib[curr_attrib_index] or curr_criterion_value == float('-inf'):
                     continue
                 seen_attrib[curr_attrib_index] = True
                 ret.append(best_attrib_split)
             return ret
 
         best_splits_per_attrib = []
+        cache_values_seen = []
         for attrib_index, is_valid_nominal_attrib in enumerate(tree_node.valid_nominal_attribute):
-            if is_valid_nominal_attrib:
+            if not is_valid_nominal_attrib:
+                cache_values_seen.append(None)
+                continue
+            else:
                 best_total_gini_index = float('-inf')
                 best_left_values = set()
                 best_right_values = set()
-                values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
+                cache_values_seen.append(cls._get_values_seen(
+                    tree_node.contingency_tables[attrib_index][1]))
+                values_seen = cache_values_seen[attrib_index]
                 for (set_left_classes,
                      set_right_classes) in cls._generate_twoing(tree_node.class_index_num_samples):
                     (twoing_contingency_table,
@@ -520,7 +552,8 @@ class Twoing(Criterion):
                      num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[attrib_index][1])
+                     tree_node.contingency_tables[attrib_index][1],
+                     cache_values_seen[attrib_index])
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
                     return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
@@ -719,9 +752,7 @@ class Twoing(Criterion):
 
     @classmethod
     def _accept_attribute(cls, real_gini, num_tests, num_fails_allowed, num_valid_samples,
-                          class_index_num_samples, values_num_samples):
-        values_seen = cls._get_values_seen(values_num_samples)
-
+                          class_index_num_samples, values_num_samples, values_seen):
         num_classes = len(class_index_num_samples)
         classes_dist = class_index_num_samples[:]
         for class_index in range(num_classes):

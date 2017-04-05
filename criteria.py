@@ -8,6 +8,7 @@ import abc
 import itertools
 # import math
 import random
+import math
 
 import numpy as np
 
@@ -71,9 +72,6 @@ class GiniGain(Criterion):
             A tuple cointaining, in order:
                 - the index of the accepted attribute;
                 - a list of sets, each containing the values that should go to that split/subtree.
-                If the split is done in a numeric attribute, it contains only two sets: one
-                containing only the largest value of the left split, and the other with the smallest
-                value of the right split;
                 -  Split value according to the criterion. If no attribute has a valid split, this
                 value should be `float('-inf')`.
                 - Total number of Monte Carlo tests needed;
@@ -88,7 +86,7 @@ class GiniGain(Criterion):
             ret = []
             for best_attrib_split in best_splits_per_attrib:
                 curr_attrib_index, _, curr_criterion_value = best_attrib_split
-                if seen_attrib[curr_attrib_index] or curr_criterion_value == float('-inf'):
+                if seen_attrib[curr_attrib_index] or math.isinf(curr_criterion_value):
                     continue
                 seen_attrib[curr_attrib_index] = True
                 ret.append(best_attrib_split)
@@ -102,9 +100,9 @@ class GiniGain(Criterion):
                 cache_values_seen.append(None)
                 continue
             else:
-                cache_values_seen.append(cls._get_values_seen(
-                    tree_node.contingency_tables[attrib_index][1]))
-                values_seen = cache_values_seen[attrib_index]
+                values_seen = cls._get_values_seen(
+                    tree_node.contingency_tables[attrib_index][1])
+                cache_values_seen.append(values_seen)
                 if (len(values_seen) > LOG2_LIMIT_EXPONENTIAL_STEPS or
                         (tree_node.number_non_empty_classes
                          * len(values_seen) * 2**len(values_seen)) > LIMIT_EXPONENTIAL_STEPS):
@@ -384,7 +382,6 @@ class GiniGain(Criterion):
                           class_index_num_samples, values_num_samples, has_exactly_two_classes,
                           values_seen):
         num_classes = len(class_index_num_samples)
-
         classes_dist = class_index_num_samples[:]
         for class_index in range(num_classes):
             classes_dist[class_index] /= float(num_valid_samples)
@@ -474,7 +471,7 @@ class Twoing(Criterion):
             ret = []
             for best_attrib_split in best_splits_per_attrib:
                 curr_attrib_index, _, curr_criterion_value = best_attrib_split
-                if seen_attrib[curr_attrib_index] or curr_criterion_value == float('-inf'):
+                if seen_attrib[curr_attrib_index] or math.isinf(curr_criterion_value):
                     continue
                 seen_attrib[curr_attrib_index] = True
                 ret.append(best_attrib_split)
@@ -490,9 +487,9 @@ class Twoing(Criterion):
                 best_total_gini_index = float('-inf')
                 best_left_values = set()
                 best_right_values = set()
-                cache_values_seen.append(cls._get_values_seen(
-                    tree_node.contingency_tables[attrib_index][1]))
-                values_seen = cache_values_seen[attrib_index]
+                values_seen = cls._get_values_seen(
+                    tree_node.contingency_tables[attrib_index][1])
+                cache_values_seen.append(values_seen)
                 for (set_left_classes,
                      set_right_classes) in cls._generate_twoing(tree_node.class_index_num_samples):
                     (twoing_contingency_table,

@@ -8,6 +8,7 @@ import abc
 import itertools
 # import math
 import random
+import math
 
 import numpy as np
 
@@ -44,346 +45,386 @@ class Criterion(object):
 #################################################################################################
 #################################################################################################
 ###                                                                                           ###
-###                                       GINI INDEX                                          ###
+###                                        GINI GAIN                                          ###
 ###                                                                                           ###
 #################################################################################################
 #################################################################################################
 
 
-# class GiniIndex(Criterion):
-#     name = 'Gini Index'
+class GiniGain(Criterion):
+    name = 'Gini Gain'
 
-#     @classmethod
-#     def evaluate_all_attributes(cls, tree_node):
-#         ret = [] # contains (attrib_index, gini, split_values, p_value, time_taken)
-#         original_gini = cls._calculate_gini_index(len(tree_node.valid_samples_indices),
-#                                                   tree_node.class_index_num_samples)
-#         for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
-#             if is_valid_attrib:
-#                 start_time = timeit.default_timer()
-#                 values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
-#                 if len(values_seen) <= 1:
-#                     print("Attribute {} ({}) is valid but has only {} value(s).".format(
-#                         attrib_index,
-#                         tree_node.dataset.attrib_names[attrib_index],
-#                         len(values_seen)))
-#                     continue
-#                 elif (len(values_seen) > LOG2_LIMIT_EXPONENTIAL_STEPS or
-#                       (tree_node.number_non_empty_classes
-#                        * len(values_seen) * 2**len(values_seen)) > LIMIT_EXPONENTIAL_STEPS):
-#                     print("Attribute {} ({}) is valid but has too many values ({}).".format(
-#                         attrib_index,
-#                         tree_node.dataset.attrib_names[attrib_index],
-#                         len(values_seen)))
-#                     print("It will be skipped!")
-#                     continue
-#                 if tree_node.number_non_empty_classes == 2:
-#                     (curr_total_gini_index,
-#                      left_values,
-#                      right_values) = cls._two_class_trick(
-#                          tree_node.class_index_num_samples,
-#                          values_seen,
-#                          tree_node.contingency_tables[attrib_index][1],
-#                          tree_node.contingency_tables[attrib_index][0],
-#                          len(tree_node.valid_samples_indices))
-#                     curr_gini = (original_gini
-#                                  - curr_total_gini_index/len(tree_node.valid_samples_indices))
-#                     ret.append((attrib_index,
-#                                 curr_gini,
-#                                 [left_values, right_values],
-#                                 None,
-#                                 timeit.default_timer() - start_time,
-#                                 None,
-#                                 None))
-#                 else:
-#                     for (left_values,
-#                          right_values,
-#                          left_num,
-#                          class_num_left,
-#                          right_num,
-#                          class_num_right) in cls._generate_possible_splits(
-#                              tree_node.contingency_tables[attrib_index][1],
-#                              values_seen,
-#                              tree_node.contingency_tables[attrib_index][0],
-#                              tree_node.dataset.num_classes):
-#                         curr_total_gini_index = cls._calculate_total_gini_index(
-#                             left_num,
-#                             class_num_left,
-#                             right_num,
-#                             class_num_right)
-#                         curr_gini = (original_gini
-#                                      - curr_total_gini_index/len(tree_node.valid_samples_indices))
-#                         ret.append((attrib_index,
-#                                     curr_gini,
-#                                     [left_values, right_values],
-#                                     None,
-#                                     timeit.default_timer() - start_time,
-#                                     None,
-#                                     None))
-#         preference_rank_full = sorted(ret, key=lambda x: -x[1])
-#         seen_attrib = [False] * len(tree_node.dataset.attrib_names)
-#         preference_rank = []
-#         for pref_elem in preference_rank_full:
-#             if seen_attrib[pref_elem[0]]:
-#                 continue
-#             seen_attrib[pref_elem[0]] = True
-#             preference_rank.append(pref_elem)
-#         ret_with_preference_full = [0] * len(tree_node.dataset.attrib_names)
-#         for preference, elem in enumerate(preference_rank):
-#             attrib_index = elem[0]
-#             new_elem = list(elem)
-#             new_elem.append(preference)
-#             ret_with_preference_full[attrib_index] = tuple(new_elem)
-#         ret_with_preference = [elem for elem in ret_with_preference_full if elem != 0]
+    @classmethod
+    def select_best_attribute_and_split(cls, tree_node, num_tests=0, num_fails_allowed=0):
+        """Returns the best attribute and its best split, according to the Gini Gain criterion,
+        using `num_tests` tests per attribute and accepting if it doesn't fail more than
+        `num_fails_allowed` times. If `num_tests` is zero, returns the attribute/split with
+        the largest criterion value.
 
-#         return ret_with_preference
+        Args:
+          tree_node (TreeNode): tree node where we want to find the best attribute/split.
+          num_tests (int, optional): number of tests to be executed in each attribute, according to
+            our Monte Carlo framework. Defaults to `0`.
+          num_fails_allowed (int, optional): maximum number of fails allowed for an attribute to be
+            accepted according to our Monte Carlo framework. Defaults to `0`.
 
-#     @classmethod
-#     def select_best_attribute_and_split(cls, tree_node):
+        Returns:
+            A tuple cointaining, in order:
+                - the index of the accepted attribute;
+                - a list of sets, each containing the values that should go to that split/subtree.
+                -  Split value according to the criterion. If no attribute has a valid split, this
+                value should be `float('-inf')`.
+                - Total number of Monte Carlo tests needed;
+                - Position of the accepted attribute in the attributes' list ordered by the
+                criterion value.
+        """
+        # Instead of minimizing the difference between the Gini Index in the current
+        # TreeNode minus the weighted Gini Index of its child TreeNode's, we just maximize
+        # the weighted Gini Index of its children.
+        def _remove_duplicate_attributes(best_splits_per_attrib, num_attributes):
+            seen_attrib = [False] * num_attributes
+            ret = []
+            for best_attrib_split in best_splits_per_attrib:
+                curr_attrib_index, _, curr_criterion_value = best_attrib_split
+                if seen_attrib[curr_attrib_index] or math.isinf(curr_criterion_value):
+                    continue
+                seen_attrib[curr_attrib_index] = True
+                ret.append(best_attrib_split)
+            return ret
 
-#         # Instead of using original_total_gini_index = (
-#         # gini_index(all_samples_in_tree_node)
-#         # - ((len(samples_in_left_node)/len(all_samples_in_tree_node))
-#         #    * gini_index(samples_in_left_node))
-#         # - ((len(samples_in_right_node)/len(all_samples_in_tree_node))
-#         #    * gini_index(samples_in_right_node))
-#         # and trying to maximize it, we'll try to minimize
-#         # total_gini_index = (len(samples_in_left_node) * gini_index(samples_in_left_node)
-#         #                     + len(samples_in_left_node) * gini_index(samples_in_right_node))
+        best_splits_per_attrib = []
+        has_exactly_two_classes = tree_node.number_non_empty_classes == 2
+        cache_values_seen = []
+        for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
+            if not is_valid_attrib:
+                cache_values_seen.append(None)
+                continue
+            else:
+                values_seen = cls._get_values_seen(
+                    tree_node.contingency_tables[attrib_index][1])
+                cache_values_seen.append(values_seen)
+                if (len(values_seen) > LOG2_LIMIT_EXPONENTIAL_STEPS or
+                        (tree_node.number_non_empty_classes
+                         * len(values_seen) * 2**len(values_seen)) > LIMIT_EXPONENTIAL_STEPS):
+                    print("Attribute {} ({}) is valid but has too many values ({}).".format(
+                        attrib_index,
+                        tree_node.dataset.attrib_names[attrib_index],
+                        len(values_seen)))
+                    print("It will be skipped!")
+                    continue
+                if has_exactly_two_classes:
+                    (curr_total_gini_index,
+                     left_values,
+                     right_values) = cls._two_class_trick(
+                         tree_node.class_index_num_samples,
+                         values_seen,
+                         tree_node.contingency_tables[attrib_index][1],
+                         tree_node.contingency_tables[attrib_index][0],
+                         len(tree_node.valid_samples_indices))
+                    best_splits_per_attrib.append((attrib_index
+                                                   [left_values, right_values],
+                                                   curr_total_gini_index))
+                else:
+                    best_total_gini_index = float('-inf')
+                    best_left_values = set()
+                    best_right_values = set()
+                    for (left_values,
+                         right_values,
+                         left_num,
+                         class_num_left,
+                         right_num,
+                         class_num_right) in cls._generate_possible_splits(
+                             tree_node.contingency_tables[attrib_index][1],
+                             values_seen,
+                             tree_node.contingency_tables[attrib_index][0],
+                             tree_node.dataset.num_classes):
+                        curr_total_gini_index = cls._calculate_total_gini_index(
+                            left_num,
+                            class_num_left,
+                            right_num,
+                            class_num_right)
+                        if curr_total_gini_index > best_total_gini_index:
+                            best_total_gini_index = curr_total_gini_index
+                            best_left_values = left_values
+                            best_right_values = right_values
+                    best_splits_per_attrib.append((attrib_index,
+                                                   [best_left_values,
+                                                    best_right_values],
+                                                   best_total_gini_index))
+        if num_tests == 0: # Just return attribute/split with maximum criterion value.
+            max_criterion_value = float('-inf')
+            best_attribute_and_split = (None, [], float('-inf'))
+            for best_attrib_split in best_splits_per_attrib:
+                criterion_value = best_attrib_split[2]
+                if criterion_value > max_criterion_value:
+                    max_criterion_value = criterion_value
+                    best_attribute_and_split = best_attrib_split
+            num_monte_carlo_tests_needed = 0
+            position_of_accepted = 1
+            return (*best_attribute_and_split,
+                    num_monte_carlo_tests_needed,
+                    position_of_accepted)
+        else: # use Monte Carlo approach.
+            best_splits_per_attrib = _remove_duplicate_attributes(
+                best_splits_per_attrib,
+                len(tree_node.valid_nominal_attribute))
+            if ORDER_RANDOMLY:
+                random.shuffle(best_splits_per_attrib)
+            else:
+                best_splits_per_attrib = sorted(best_splits_per_attrib, key=lambda x: -x[2])
 
-#         # Since total_gini_index above is always non-negative and <= 2 (because gini_index is
-#         # always non-negative and <= 1.0), the starting value below will be replaced in the for
-#         # loop.
-#         best_split_total_gini_index = float('inf')
-#         best_split_attrib_index = 0
-#         best_split_left_values = set([])
-#         best_split_right_values = set([])
+            total_num_tests_needed = 0
+            for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
+                attrib_index, _, criterion_value = best_attrib_split
+                (should_accept,
+                 num_tests_needed) = cls._accept_attribute(
+                     criterion_value,
+                     num_tests,
+                     num_fails_allowed,
+                     len(tree_node.valid_samples_indices),
+                     tree_node.class_index_num_samples,
+                     tree_node.contingency_tables[attrib_index][1],
+                     has_exactly_two_classes,
+                     cache_values_seen[attrib_index])
+                total_num_tests_needed += num_tests_needed
+                if should_accept:
+                    return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
+            return (None, [], float('-inf'), total_num_tests_needed, None)
 
-#         for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
-#             if is_valid_attrib:
-#                 values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
-#                 if len(values_seen) <= 1:
-#                     print("Attribute {} ({}) is valid but has only {} value(s).".format(
-#                         attrib_index,
-#                         tree_node.dataset.attrib_names[attrib_index],
-#                         len(values_seen)))
-#                     continue
-#                 elif (len(values_seen) > LOG2_LIMIT_EXPONENTIAL_STEPS or
-#                       (tree_node.number_non_empty_classes
-#                        * len(values_seen) * 2**len(values_seen)) > LIMIT_EXPONENTIAL_STEPS):
-#                     print("Attribute {} ({}) is valid but has too many values ({}).".format(
-#                         attrib_index,
-#                         tree_node.dataset.attrib_names[attrib_index],
-#                         len(values_seen)))
-#                     print("It will be skipped!")
-#                     continue
-#                 if tree_node.number_non_empty_classes == 2:
-#                     (curr_total_gini_index,
-#                      left_values,
-#                      right_values) = cls._two_class_trick(
-#                          tree_node.class_index_num_samples,
-#                          values_seen,
-#                          tree_node.contingency_tables[attrib_index][1],
-#                          tree_node.contingency_tables[attrib_index][0],
-#                          len(tree_node.valid_samples_indices))
-#                     if curr_total_gini_index < best_split_total_gini_index:
-#                         best_split_total_gini_index = curr_total_gini_index
-#                         best_split_attrib_index = attrib_index
-#                         best_split_left_values = left_values
-#                         best_split_right_values = right_values
-#                 else:
-#                     for (left_values,
-#                          right_values,
-#                          left_num,
-#                          class_num_left,
-#                          right_num,
-#                          class_num_right) in cls._generate_possible_splits(
-#                              tree_node.contingency_tables[attrib_index][1],
-#                              values_seen,
-#                              tree_node.contingency_tables[attrib_index][0],
-#                              tree_node.dataset.num_classes):
-#                         curr_total_gini_index = cls._calculate_total_gini_index(
-#                             left_num,
-#                             class_num_left,
-#                             right_num,
-#                             class_num_right)
-#                         if curr_total_gini_index < best_split_total_gini_index:
-#                             best_split_total_gini_index = curr_total_gini_index
-#                             best_split_attrib_index = attrib_index
-#                             best_split_left_values = left_values
-#                             best_split_right_values = right_values
-#         splits_values = [best_split_left_values, best_split_right_values]
-#         return (best_split_attrib_index, splits_values, best_split_total_gini_index, None)
+    @staticmethod
+    def _get_values_seen(values_num_samples):
+        values_seen = set()
+        for value, num_samples in enumerate(values_num_samples):
+            if num_samples > 0:
+                values_seen.add(value)
+        return values_seen
 
-#     @staticmethod
-#     def _get_values_seen(values_num_samples):
-#         values_seen = set()
-#         for value, num_samples in enumerate(values_num_samples):
-#             if num_samples > 0:
-#                 values_seen.add(value)
-#         return values_seen
+    @staticmethod
+    def _two_class_trick(class_index_num_samples, values_seen, values_num_samples,
+                         contingency_table, num_total_valid_samples):
+        # TESTED!
+        def _get_non_empty_class_indices(class_index_num_samples):
+            # TESTED!
+            first_non_empty_class = None
+            second_non_empty_class = None
+            for class_index, class_num_samples in enumerate(class_index_num_samples):
+                if class_num_samples > 0:
+                    if first_non_empty_class is None:
+                        first_non_empty_class = class_index
+                    else:
+                        second_non_empty_class = class_index
+                        break
+            return first_non_empty_class, second_non_empty_class
 
-#     @staticmethod
-#     def _two_class_trick(class_index_num_samples, values_seen, values_num_samples,
-#                          contingency_table, num_total_valid_samples):
-#         # TESTED!
-#         def _get_non_empty_class_indices(class_index_num_samples):
-#             # TESTED!
-#             first_non_empty_class = None
-#             second_non_empty_class = None
-#             for class_index, class_num_samples in enumerate(class_index_num_samples):
-#                 if class_num_samples > 0:
-#                     if first_non_empty_class is None:
-#                         first_non_empty_class = class_index
-#                     else:
-#                         second_non_empty_class = class_index
-#                         break
-#             return first_non_empty_class, second_non_empty_class
+        def _calculate_value_class_ratio(values_seen, values_num_samples, contingency_table,
+                                         non_empty_class_indices):
+            # TESTED!
+            value_number_ratio = [] # [(value, number_on_second_class, ratio_on_second_class)]
+            second_class_index = non_empty_class_indices[1]
+            for curr_value in values_seen:
+                number_second_non_empty = contingency_table[curr_value][second_class_index]
+                value_number_ratio.append(
+                    (curr_value,
+                     number_second_non_empty,
+                     number_second_non_empty/values_num_samples[curr_value]))
+            value_number_ratio = sorted(value_number_ratio, key=lambda tup: tup[2])
+            return value_number_ratio
 
-#         def _calculate_value_class_ratio(values_seen, values_num_samples, contingency_table,
-#                                          non_empty_class_indices):
-#             # TESTED!
-#             value_number_ratio = [] # [(value, number_on_second_class, ratio_on_second_class)]
-#             second_class_index = non_empty_class_indices[1]
-#             for curr_value in values_seen:
-#                 number_second_non_empty = contingency_table[curr_value][second_class_index]
-#                 value_number_ratio.append(
-#                     (curr_value,
-#                      number_second_non_empty,
-#                      number_second_non_empty/values_num_samples[curr_value]))
-#             value_number_ratio = sorted(value_number_ratio, key=lambda tup: tup[2])
-#             return value_number_ratio
+        def _calculate_gini_index(num_left_first, num_left_second, num_right_first,
+                                  num_right_second, num_left_samples, num_right_samples):
+            # TESTED!
+            if num_left_samples != 0:
+                left_first_class_freq_ratio = float(num_left_first)/float(num_left_samples)
+                left_second_class_freq_ratio = float(num_left_second)/float(num_left_samples)
+                left_split_gini_index = (1.0
+                                         - left_first_class_freq_ratio**2
+                                         - left_second_class_freq_ratio**2)
+            else:
+                # We can set left_split_gini_index to any value here, since it will be multiplied
+                # by zero in curr_total_gini_index
+                left_split_gini_index = 1.0
 
-#         def _calculate_gini_index(num_left_first, num_left_second, num_right_first,
-#                                   num_right_second, num_left_samples, num_right_samples):
-#             # TESTED!
-#             if num_left_samples != 0:
-#                 left_first_class_freq_ratio = float(num_left_first)/float(num_left_samples)
-#                 left_second_class_freq_ratio = float(num_left_second)/float(num_left_samples)
-#                 left_split_gini_index = (1.0
-#                                          - left_first_class_freq_ratio**2
-#                                          - left_second_class_freq_ratio**2)
-#             else:
-#                 # We can set left_split_gini_index to any value here, since it will be multiplied
-#                 # by zero in curr_total_gini_index
-#                 left_split_gini_index = 1.0
+            if num_right_samples != 0:
+                right_first_class_freq_ratio = float(num_right_first)/float(num_right_samples)
+                right_second_class_freq_ratio = float(num_right_second)/float(num_right_samples)
+                right_split_gini_index = (1.0
+                                          - right_first_class_freq_ratio**2
+                                          - right_second_class_freq_ratio**2)
+            else:
+                # We can set right_split_gini_index to any value here, since it will be multiplied
+                # by zero in curr_total_gini_index
+                right_split_gini_index = 1.0
 
-#             if num_right_samples != 0:
-#                 right_first_class_freq_ratio = float(num_right_first)/float(num_right_samples)
-#                 right_second_class_freq_ratio = float(num_right_second)/float(num_right_samples)
-#                 right_split_gini_index = (1.0
-#                                           - right_first_class_freq_ratio**2
-#                                           - right_second_class_freq_ratio**2)
-#             else:
-#                 # We can set right_split_gini_index to any value here, since it will be multiplied
-#                 # by zero in curr_total_gini_index
-#                 right_split_gini_index = 1.0
+            curr_total_gini_index = (num_left_samples * left_split_gini_index
+                                     + num_right_samples * right_split_gini_index)
+            return curr_total_gini_index
 
-#             curr_total_gini_index = (num_left_samples * left_split_gini_index
-#                                      + num_right_samples * right_split_gini_index)
-#             return curr_total_gini_index
+        # We only need to sort values by the percentage of samples in second non-empty class with
+        # this value. The best split will be given by choosing an index to split this list of
+        # values in two.
+        (first_non_empty_class,
+         second_non_empty_class) = _get_non_empty_class_indices(class_index_num_samples)
+        value_number_ratio = _calculate_value_class_ratio(values_seen,
+                                                          values_num_samples,
+                                                          contingency_table,
+                                                          (first_non_empty_class,
+                                                           second_non_empty_class))
 
-#         # We only need to sort values by the percentage of samples in second non-empty class with
-#         # this value. The best split will be given by choosing an index to split this list of
-#         # values in two.
-#         (first_non_empty_class,
-#          second_non_empty_class) = _get_non_empty_class_indices(class_index_num_samples)
-#         value_number_ratio = _calculate_value_class_ratio(values_seen,
-#                                                           values_num_samples,
-#                                                           contingency_table,
-#                                                           (first_non_empty_class,
-#                                                            second_non_empty_class))
+        # Since total_gini_index above is always non-negative and <= 2 (because gini_index is
+        # always non-negative and <= 1.0), the starting value below will be replaced in the for
+        # loop.
+        best_split_total_gini_index = float('inf') # > 2.0
+        best_last_left_index = 0
 
-#         # Since total_gini_index above is always non-negative and <= 2 (because gini_index is
-#         # always non-negative and <= 1.0), the starting value below will be replaced in the for
-#         # loop.
-#         best_split_total_gini_index = float('inf') # > 2.0
-#         best_last_left_index = 0
+        num_left_first = 0
+        num_left_second = 0
+        num_left_samples = 0
+        num_right_first = class_index_num_samples[first_non_empty_class]
+        num_right_second = class_index_num_samples[second_non_empty_class]
+        num_right_samples = num_total_valid_samples
 
-#         num_left_first = 0
-#         num_left_second = 0
-#         num_left_samples = 0
-#         num_right_first = class_index_num_samples[first_non_empty_class]
-#         num_right_second = class_index_num_samples[second_non_empty_class]
-#         num_right_samples = num_total_valid_samples
+        for last_left_index, (last_left_value, last_left_num_second, _) in enumerate(
+                value_number_ratio[:-1]):
+            num_samples_last_left_value = values_num_samples[last_left_value]
+            # num_samples_last_left_value > 0 always, since the values without samples were not
+            # added to the values_seen when created by cls._generate_value_to_index
 
-#         for last_left_index, (last_left_value, last_left_num_second, _) in enumerate(
-#                 value_number_ratio[:-1]):
-#             num_samples_last_left_value = values_num_samples[last_left_value]
-#             # num_samples_last_left_value > 0 always, since the values without samples were not
-#             # added to the values_seen when created by cls._generate_value_to_index
+            last_left_num_first = num_samples_last_left_value - last_left_num_second
 
-#             last_left_num_first = num_samples_last_left_value - last_left_num_second
+            num_left_samples += num_samples_last_left_value
+            num_left_first += last_left_num_first
+            num_left_second += last_left_num_second
+            num_right_samples -= num_samples_last_left_value
+            num_right_first -= last_left_num_first
+            num_right_second -= last_left_num_second
 
-#             num_left_samples += num_samples_last_left_value
-#             num_left_first += last_left_num_first
-#             num_left_second += last_left_num_second
-#             num_right_samples -= num_samples_last_left_value
-#             num_right_first -= last_left_num_first
-#             num_right_second -= last_left_num_second
+            curr_total_gini_index = _calculate_gini_index(num_left_first,
+                                                          num_left_second,
+                                                          num_right_first,
+                                                          num_right_second,
+                                                          num_left_samples,
+                                                          num_right_samples)
+            if curr_total_gini_index < best_split_total_gini_index:
+                best_split_total_gini_index = curr_total_gini_index
+                best_last_left_index = last_left_index
 
-#             curr_total_gini_index = _calculate_gini_index(num_left_first,
-#                                                           num_left_second,
-#                                                           num_right_first,
-#                                                           num_right_second,
-#                                                           num_left_samples,
-#                                                           num_right_samples)
-#             if curr_total_gini_index < best_split_total_gini_index:
-#                 best_split_total_gini_index = curr_total_gini_index
-#                 best_last_left_index = last_left_index
+        # Let's get the values and split the indices corresponding to the best split found.
+        set_left_values = set([tup[0] for tup in value_number_ratio[:best_last_left_index + 1]])
+        set_right_values = set(values_seen) - set_left_values
 
-#         # Let's get the values and split the indices corresponding to the best split found.
-#         set_left_values = set([tup[0] for tup in value_number_ratio[:best_last_left_index + 1]])
-#         set_right_values = set(values_seen) - set_left_values
+        return (best_split_total_gini_index, set_left_values, set_right_values)
 
-#         return (best_split_total_gini_index, set_left_values, set_right_values)
+    @staticmethod
+    def _generate_possible_splits(values_num_samples, values_seen, contingency_table,
+                                  num_classes):
+        # TESTED!
+        # We only need to look at subsets of up to (len(values_seen)/2 + 1) elements because of
+        # symmetry! The subsets we are not choosing are complements of the ones chosen.
+        for left_values in itertools.chain.from_iterable(
+                itertools.combinations(values_seen, size_left_side)
+                for size_left_side in range(len(values_seen)//2 + 1)):
+            set_left_values = set(left_values)
+            set_right_values = values_seen - set_left_values
 
-#     @staticmethod
-#     def _generate_possible_splits(values_num_samples, values_seen, contingency_table,
-#                                   num_classes):
-#         # TESTED!
-#         # We only need to look at subsets of up to (len(values_seen)/2 + 1) elements because of
-#         # symmetry! The subsets we are not choosing are complements of the ones chosen.
-#         for left_values in itertools.chain.from_iterable(
-#                 itertools.combinations(values_seen, size_left_side)
-#                 for size_left_side in range(len(values_seen)//2 + 1)):
-#             set_left_values = set(left_values)
-#             set_right_values = values_seen - set_left_values
+            left_num = 0
+            class_num_left = [0] * num_classes
+            right_num = 0
+            class_num_right = [0] * num_classes
+            for value in set_left_values:
+                left_num += values_num_samples[value]
+                for class_index in range(num_classes):
+                    class_num_left[class_index] += contingency_table[value][class_index]
+            for value in set_right_values:
+                right_num += values_num_samples[value]
+                for class_index in range(num_classes):
+                    class_num_right[class_index] += contingency_table[value][class_index]
 
-#             left_num = 0
-#             class_num_left = [0] * num_classes
-#             right_num = 0
-#             class_num_right = [0] * num_classes
-#             for value in set_left_values:
-#                 left_num += values_num_samples[value]
-#                 for class_index in range(num_classes):
-#                     class_num_left[class_index] += contingency_table[value][class_index]
-#             for value in set_right_values:
-#                 right_num += values_num_samples[value]
-#                 for class_index in range(num_classes):
-#                     class_num_right[class_index] += contingency_table[value][class_index]
+            if left_num == 0 or right_num == 0:
+                # A valid split must have at least one sample in each side
+                continue
+            yield (set_left_values, set_right_values, left_num, class_num_left, right_num,
+                   class_num_right)
 
-#             if left_num == 0 or right_num == 0:
-#                 # A valid split must have at least one sample in each side
-#                 continue
-#             yield (set_left_values, set_right_values, left_num, class_num_left, right_num,
-#                    class_num_right)
+    @staticmethod
+    def _calculate_gini_index(side_num, class_num_side):
+        gini_index = 1.0
+        for curr_class_num_side in class_num_side:
+            if curr_class_num_side > 0:
+                gini_index -= (curr_class_num_side/side_num)**2
+        return gini_index
 
-#     @staticmethod
-#     def _calculate_gini_index(side_num, class_num_side):
-#         gini_index = 1.0
-#         for curr_class_num_side in class_num_side:
-#             if curr_class_num_side > 0:
-#                 gini_index -= (curr_class_num_side/side_num)**2
-#         return gini_index
+    @classmethod
+    def _calculate_total_gini_index(cls, left_num, class_num_left, right_num, class_num_right):
+        left_split_gini_index = cls._calculate_gini_index(left_num, class_num_left)
+        right_split_gini_index = cls._calculate_gini_index(right_num, class_num_right)
+        total_gini_index = left_num * left_split_gini_index + right_num * right_split_gini_index
+        return total_gini_index
 
-#     @classmethod
-#     def _calculate_total_gini_index(cls, left_num, class_num_left, right_num, class_num_right):
-#         left_split_gini_index = cls._calculate_gini_index(left_num, class_num_left)
-#         right_split_gini_index = cls._calculate_gini_index(right_num, class_num_right)
-#         total_gini_index = left_num * left_split_gini_index + right_num * right_split_gini_index
-#         return total_gini_index
+    @staticmethod
+    def _generate_random_contingency_table(classes_dist, num_valid_samples, values_num_samples):
+        # TESTED!
+        random_classes = np.random.choice(len(classes_dist),
+                                          num_valid_samples,
+                                          replace=True,
+                                          p=classes_dist)
+        random_contingency_table = np.zeros((values_num_samples.shape[0], len(classes_dist)),
+                                            dtype=float)
+        samples_done = 0
+        for value, value_num_samples in enumerate(values_num_samples):
+            if value_num_samples > 0:
+                for class_index in random_classes[samples_done: samples_done + value_num_samples]:
+                    random_contingency_table[value, class_index] += 1
+                samples_done += value_num_samples
+        return random_contingency_table
 
+    @classmethod
+    def _accept_attribute(cls, real_gini, num_tests, num_fails_allowed, num_valid_samples,
+                          class_index_num_samples, values_num_samples, has_exactly_two_classes,
+                          values_seen):
+        num_classes = len(class_index_num_samples)
+        classes_dist = class_index_num_samples[:]
+        for class_index in range(num_classes):
+            classes_dist[class_index] /= float(num_valid_samples)
+
+        num_fails_seen = 0
+        for test_number in range(1, num_tests + 1):
+            random_contingency_table = cls._generate_random_contingency_table(
+                classes_dist,
+                num_valid_samples,
+                values_num_samples)
+
+            if has_exactly_two_classes:
+                (best_gini_found, _, _) = cls._two_class_trick(
+                    class_index_num_samples,
+                    values_seen,
+                    values_num_samples,
+                    random_contingency_table,
+                    num_valid_samples)
+            else:
+                best_gini_found = float('-inf')
+                for (_, _, left_num,
+                     class_num_left,
+                     right_num,
+                     class_num_right) in cls._generate_possible_splits(
+                         values_num_samples,
+                         values_seen,
+                         random_contingency_table,
+                         num_classes):
+                    curr_total_gini_index = cls._calculate_total_gini_index(
+                        left_num,
+                        class_num_left,
+                        right_num,
+                        class_num_right)
+                    if curr_total_gini_index < best_gini_found:
+                        best_gini_found = curr_total_gini_index
+
+            if best_gini_found > real_gini:
+                num_fails_seen += 1
+                if num_fails_seen > num_fails_allowed:
+                    return False, test_number
+            if num_tests - test_number <= num_fails_allowed - num_fails_seen:
+                return True, None
+        return True, None
 
 
 #################################################################################################
@@ -429,20 +470,26 @@ class Twoing(Criterion):
             seen_attrib = [False] * num_attributes
             ret = []
             for best_attrib_split in best_splits_per_attrib:
-                curr_attrib_index = best_attrib_split[0]
-                if seen_attrib[curr_attrib_index]:
+                curr_attrib_index, _, curr_criterion_value = best_attrib_split
+                if seen_attrib[curr_attrib_index] or math.isinf(curr_criterion_value):
                     continue
                 seen_attrib[curr_attrib_index] = True
                 ret.append(best_attrib_split)
             return ret
 
         best_splits_per_attrib = []
+        cache_values_seen = []
         for attrib_index, is_valid_nominal_attrib in enumerate(tree_node.valid_nominal_attribute):
-            if is_valid_nominal_attrib:
+            if not is_valid_nominal_attrib:
+                cache_values_seen.append(None)
+                continue
+            else:
                 best_total_gini_index = float('-inf')
                 best_left_values = set()
                 best_right_values = set()
-                values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
+                values_seen = cls._get_values_seen(
+                    tree_node.contingency_tables[attrib_index][1])
+                cache_values_seen.append(values_seen)
                 for (set_left_classes,
                      set_right_classes) in cls._generate_twoing(tree_node.class_index_num_samples):
                     (twoing_contingency_table,
@@ -499,11 +546,11 @@ class Twoing(Criterion):
                  num_tests_needed) = cls._accept_attribute(
                      criterion_value,
                      num_tests,
+                     num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[attrib_index][0],
                      tree_node.contingency_tables[attrib_index][1],
-                     num_fails_allowed)
+                     cache_values_seen[attrib_index])
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
                     return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
@@ -684,20 +731,6 @@ class Twoing(Criterion):
         return total_gini_index
 
     @staticmethod
-    def _get_classes_dist(contingency_table, values_num_samples, num_valid_samples):
-        num_classes = contingency_table.shape[1]
-        classes_dist = [0] * num_classes
-        for value, value_num_samples in enumerate(values_num_samples):
-            if value_num_samples == 0:
-                continue
-            for class_index, num_samples in enumerate(contingency_table[value, :]):
-                if num_samples > 0:
-                    classes_dist[class_index] += num_samples
-        for class_index in range(num_classes):
-            classes_dist[class_index] /= float(num_valid_samples)
-        return classes_dist
-
-    @staticmethod
     def _generate_random_contingency_table(classes_dist, num_valid_samples, values_num_samples):
         # TESTED!
         random_classes = np.random.choice(len(classes_dist),
@@ -715,12 +748,13 @@ class Twoing(Criterion):
         return random_contingency_table
 
     @classmethod
-    def _accept_attribute(cls, real_gini, num_tests, num_valid_samples, class_index_num_samples,
-                          contingency_table, values_num_samples, num_fails_allowed):
-        values_seen = cls._get_values_seen(values_num_samples),
-        classes_dist = cls._get_classes_dist(contingency_table,
-                                             values_num_samples,
-                                             num_valid_samples)
+    def _accept_attribute(cls, real_gini, num_tests, num_fails_allowed, num_valid_samples,
+                          class_index_num_samples, values_num_samples, values_seen):
+        num_classes = len(class_index_num_samples)
+        classes_dist = class_index_num_samples[:]
+        for class_index in range(num_classes):
+            classes_dist[class_index] /= float(num_valid_samples)
+
         num_fails_seen = 0
         for test_number in range(1, num_tests + 1):
             random_contingency_table = cls._generate_random_contingency_table(

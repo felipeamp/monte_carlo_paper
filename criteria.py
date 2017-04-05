@@ -6,9 +6,8 @@
 
 import abc
 import itertools
-# import math
-import random
 import math
+import random
 
 import numpy as np
 
@@ -28,7 +27,6 @@ class Criterion(object):
         """Returns the best attribute and its best split, according to the criterion, using
         `num_tests` tests per attribute and accepting if it doesn't fail more than
         `num_fails_allowed` times.
-
         Args:
           tree_node (TreeNode): tree node where we want to find the best attribute/split.
           num_tests (int, optional): number of tests to be executed in each attribute, according to
@@ -171,7 +169,7 @@ class GiniGain(Criterion):
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
-                best_splits_per_attrib = sorted(best_splits_per_attrib, key=lambda x: -x[2])
+                best_splits_per_attrib.sort(key=lambda x: -x[2])
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
@@ -226,8 +224,8 @@ class GiniGain(Criterion):
                 value_number_ratio.append(
                     (curr_value,
                      number_second_non_empty,
-                     number_second_non_empty/values_num_samples[curr_value]))
-            value_number_ratio = sorted(value_number_ratio, key=lambda tup: tup[2])
+                     number_second_non_empty / values_num_samples[curr_value]))
+            value_number_ratio.sort(key=lambda tup: tup[2])
             return value_number_ratio
 
         def _calculate_gini_index(num_left_first, num_left_second, num_right_first,
@@ -427,6 +425,7 @@ class GiniGain(Criterion):
         return True, None
 
 
+
 #################################################################################################
 #################################################################################################
 ###                                                                                           ###
@@ -445,21 +444,16 @@ class Twoing(Criterion):
         `num_tests` tests per attribute and accepting if it doesn't fail more than
         `num_fails_allowed` times. If `num_tests` is zero, returns the attribute/split with the
         largest criterion value.
-
         Args:
           tree_node (TreeNode): tree node where we want to find the best attribute/split.
           num_tests (int, optional): number of tests to be executed in each attribute, according to
             our Monte Carlo framework. Defaults to `0`.
           num_fails_allowed (int, optional): maximum number of fails allowed for an attribute to be
             accepted according to our Monte Carlo framework. Defaults to `0`.
-
         Returns:
             A tuple cointaining, in order:
                 - the index of the accepted attribute;
                 - a list of sets, each containing the values that should go to that split/subtree.
-                If the split is done in a numeric attribute, it contains only two sets: one
-                containing only the largest value of the left split, and the other with the smallest
-                value of the right split;
                 -  Split value according to the criterion. If no attribute has a valid split, this
                 value should be `float('-inf')`.
                 - Total number of Monte Carlo tests needed;
@@ -537,7 +531,7 @@ class Twoing(Criterion):
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
-                best_splits_per_attrib = sorted(best_splits_per_attrib, key=lambda x: -x[2])
+                best_splits_per_attrib.sort(key=lambda x: -x[2])
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
@@ -628,7 +622,7 @@ class Twoing(Criterion):
                 value_number_ratio.append((curr_value,
                                            number_second_non_empty,
                                            number_second_non_empty/values_num_samples[curr_value]))
-            value_number_ratio = sorted(value_number_ratio, key=lambda tup: tup[2])
+            value_number_ratio.sort(key=lambda tup: tup[2])
             return value_number_ratio
 
         def _calculate_gini_index(num_left_first, num_left_second, num_right_first,
@@ -803,126 +797,167 @@ class Twoing(Criterion):
 #################################################################################################
 
 
-# class GainRatio(Criterion):
-#     name = 'Gain Ratio'
+class GainRatio(Criterion):
+    name = 'Gain Ratio'
 
-#     @classmethod
-#     def evaluate_all_attributes(cls, tree_node):
+    @classmethod
+    def select_best_attribute_and_split(cls, tree_node, num_tests=0, num_fails_allowed=0):
+        """Returns the best attribute and its best split, according to the Gain Ratio criterion,
+        using `num_tests` tests per attribute and accepting if it doesn't fail more than
+        `num_fails_allowed` times. If `num_tests` is zero, returns the attribute/split with the
+        largest criterion value.
+        Args:
+          tree_node (TreeNode): tree node where we want to find the best attribute/split.
+          num_tests (int, optional): number of tests to be executed in each attribute, according to
+            our Monte Carlo framework. Defaults to `0`.
+          num_fails_allowed (int, optional): maximum number of fails allowed for an attribute to be
+            accepted according to our Monte Carlo framework. Defaults to `0`.
+        Returns:
+            A tuple cointaining, in order:
+                - the index of the accepted attribute;
+                - a list of sets, each containing the values that should go to that split/subtree.
+                -  Split value according to the criterion. If no attribute has a valid split, this
+                value should be `float('-inf')`.
+                - Total number of Monte Carlo tests needed;
+                - Position of the accepted attribute in the attributes' list ordered by the
+                criterion value.
+        """
 
-#         #First we pre-calculate the original class frequency and information
-#         original_information = cls._calculate_information(tree_node.class_index_num_samples,
-#                                                           len(tree_node.valid_samples_indices))
-#         ret = [] # contains (attrib_index, gain_ratio, split_values, p_value, time_taken)
-#         for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
-#             if is_valid_attrib:
-#                 start_time = timeit.default_timer()
-#                 values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
-#                 if len(values_seen) <= 1:
-#                     print("Attribute {} ({}) is valid but has only {} value(s).".format(
-#                         attrib_index,
-#                         tree_node.dataset.attrib_names[attrib_index],
-#                         len(values_seen)))
-#                     continue
-#                 curr_gain_ratio = cls._calculate_gain_ratio(
-#                     len(tree_node.valid_samples_indices),
-#                     tree_node.contingency_tables[attrib_index][0],
-#                     tree_node.contingency_tables[attrib_index][1],
-#                     original_information)
-#                 ret.append((attrib_index,
-#                             curr_gain_ratio,
-#                             [set([value]) for value in values_seen],
-#                             None,
-#                             timeit.default_timer() - start_time,
-#                             None,
-#                             None))
+        #First we calculate the original class frequency and information
+        original_information = cls._calculate_information(tree_node.class_index_num_samples,
+                                                          len(tree_node.valid_samples_indices))
+        best_splits_per_attrib = []
+        for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
+            if is_valid_attrib:
+                values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
+                splits_values = [set([value]) for value in values_seen]
+                curr_gain_ratio = cls._calculate_gain_ratio(
+                    len(tree_node.valid_samples_indices),
+                    tree_node.contingency_tables[attrib_index][0],
+                    tree_node.contingency_tables[attrib_index][1],
+                    original_information)
+                best_splits_per_attrib.append((attrib_index,
+                                               splits_values,
+                                               curr_gain_ratio))
+        if num_tests == 0: # Just return attribute/split with maximum criterion value.
+            max_criterion_value = float('-inf')
+            best_attribute_and_split = (None, [], float('-inf'))
+            for best_attrib_split in best_splits_per_attrib:
+                criterion_value = best_attrib_split[2]
+                if criterion_value > max_criterion_value:
+                    max_criterion_value = criterion_value
+                    best_attribute_and_split = best_attrib_split
+            num_monte_carlo_tests_needed = 0
+            position_of_accepted = 1
+            return (*best_attribute_and_split,
+                    num_monte_carlo_tests_needed,
+                    position_of_accepted)
+        else: # use Monte Carlo approach.
+            if ORDER_RANDOMLY:
+                random.shuffle(best_splits_per_attrib)
+            else:
+                best_splits_per_attrib.sort(key=lambda x: -x[2])
 
-#         preference_rank_full = sorted(ret, key=lambda x: -x[1])
-#         seen_attrib = [False] * len(tree_node.dataset.attrib_names)
-#         preference_rank = []
-#         for pref_elem in preference_rank_full:
-#             if seen_attrib[pref_elem[0]]:
-#                 continue
-#             seen_attrib[pref_elem[0]] = True
-#             preference_rank.append(pref_elem)
-#         ret_with_preference_full = [0] * len(tree_node.dataset.attrib_names)
-#         for preference, elem in enumerate(preference_rank):
-#             attrib_index = elem[0]
-#             new_elem = list(elem)
-#             new_elem.append(preference)
-#             ret_with_preference_full[attrib_index] = tuple(new_elem)
-#         ret_with_preference = [elem for elem in ret_with_preference_full if elem != 0]
+            total_num_tests_needed = 0
+            for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
+                attrib_index, _, criterion_value = best_attrib_split
+                (should_accept,
+                 num_tests_needed) = cls._accept_attribute(
+                     criterion_value,
+                     num_tests,
+                     num_fails_allowed,
+                     len(tree_node.valid_samples_indices),
+                     tree_node.class_index_num_samples,
+                     tree_node.contingency_tables[attrib_index][1],
+                     original_information)
+                total_num_tests_needed += num_tests_needed
+                if should_accept:
+                    return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
+            return (None, [], float('-inf'), total_num_tests_needed, None)
 
-#         return ret_with_preference
+    @staticmethod
+    def _get_values_seen(values_num_samples):
+        values_seen = set()
+        for value, num_samples in enumerate(values_num_samples):
+            if num_samples > 0:
+                values_seen.add(value)
+        return values_seen
 
-#     @classmethod
-#     def select_best_attribute_and_split(cls, tree_node):
+    @classmethod
+    def _calculate_gain_ratio(cls, num_valid_samples, contingency_table, values_num_samples,
+                              original_information):
+        information_gain = original_information # Initial information Gain
+        for value, value_num_samples in enumerate(values_num_samples):
+            if value_num_samples == 0:
+                continue
+            curr_split_information = cls._calculate_information(contingency_table[value],
+                                                                value_num_samples)
+            information_gain -= (value_num_samples/num_valid_samples) * curr_split_information
+        # Gain Ratio
+        potential_partition_information = cls._calculate_potential_information(values_num_samples,
+                                                                               num_valid_samples)
+        gain_ratio = information_gain / potential_partition_information
+        return gain_ratio
 
-#         #First we pre-calculate the original class frequency and information
-#         original_information = cls._calculate_information(tree_node.class_index_num_samples,
-#                                                           len(tree_node.valid_samples_indices))
-#         # Since gain_ratio is always non-negative, the starting value below will be replaced in
-#         # the for loop.
-#         best_split_gain_ratio = float('-inf')
-#         best_split_attrib_index = 0
-#         best_splits_values = []
-#         for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
-#             if is_valid_attrib:
-#                 values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
-#                 if len(values_seen) <= 1:
-#                     print("Attribute {} ({}) is valid but has only {} value(s).".format(
-#                         attrib_index,
-#                         tree_node.dataset.attrib_names[attrib_index],
-#                         len(values_seen)))
-#                     continue
-#                 curr_gain_ratio = cls._calculate_gain_ratio(
-#                     len(tree_node.valid_samples_indices),
-#                     tree_node.contingency_tables[attrib_index][0],
-#                     tree_node.contingency_tables[attrib_index][1],
-#                     original_information)
-#                 if curr_gain_ratio > best_split_gain_ratio:
-#                     best_split_gain_ratio = curr_gain_ratio
-#                     best_split_attrib_index = attrib_index
-#                     best_splits_values = [set([value]) for value in values_seen]
-#         return (best_split_attrib_index, best_splits_values, best_split_gain_ratio, None)
+    @staticmethod
+    def _calculate_information(value_class_num_samples, value_num_samples):
+        information = 0.0
+        for curr_class_num_samples in value_class_num_samples:
+            if curr_class_num_samples != 0:
+                curr_frequency = curr_class_num_samples / value_num_samples
+                information -= curr_frequency * math.log2(curr_frequency)
+        return information
 
-#     @staticmethod
-#     def _get_values_seen(values_num_samples):
-#         values_seen = set()
-#         for value, num_samples in enumerate(values_num_samples):
-#             if num_samples > 0:
-#                 values_seen.add(value)
-#         return values_seen
+    @staticmethod
+    def _calculate_potential_information(values_num_samples, num_valid_samples):
+        partition_potential_information = 0.0
+        for value_num_samples in values_num_samples:
+            if value_num_samples != 0:
+                curr_ratio = value_num_samples / num_valid_samples
+                partition_potential_information -= curr_ratio * math.log2(curr_ratio)
+        return partition_potential_information
 
-#     @classmethod
-#     def _calculate_gain_ratio(cls, num_valid_samples, contingency_table, values_num_samples,
-#                               original_information):
-#         information_gain = original_information # Initial information Gain
-#         for value, value_num_samples in enumerate(values_num_samples):
-#             if value_num_samples == 0:
-#                 continue
-#             curr_split_information = cls._calculate_information(contingency_table[value],
-#                                                                 value_num_samples)
-#             information_gain -= (value_num_samples/num_valid_samples) * curr_split_information
-#         # Gain Ratio
-#         potential_partition_information = cls._calculate_potential_information(values_num_samples,
-#                                                                                num_valid_samples)
-#         gain_ratio = information_gain / potential_partition_information
-#         return gain_ratio
 
-#     @staticmethod
-#     def _calculate_information(value_class_num_samples, value_num_samples):
-#         information = 0.0
-#         for curr_class_num_samples in value_class_num_samples:
-#             if curr_class_num_samples != 0:
-#                 curr_frequency = curr_class_num_samples / value_num_samples
-#                 information -= curr_frequency * math.log2(curr_frequency)
-#         return information
+    @staticmethod
+    def _generate_random_contingency_table(classes_dist, num_valid_samples, values_num_samples):
+        # TESTED!
+        random_classes = np.random.choice(len(classes_dist),
+                                          num_valid_samples,
+                                          replace=True,
+                                          p=classes_dist)
+        random_contingency_table = np.zeros((values_num_samples.shape[0], len(classes_dist)),
+                                            dtype=float)
+        samples_done = 0
+        for value, value_num_samples in enumerate(values_num_samples):
+            if value_num_samples > 0:
+                for class_index in random_classes[samples_done: samples_done + value_num_samples]:
+                    random_contingency_table[value, class_index] += 1
+                samples_done += value_num_samples
+        return random_contingency_table
 
-#     @staticmethod
-#     def _calculate_potential_information(values_num_samples, num_valid_samples):
-#         partition_potential_information = 0.0
-#         for value_num_samples in values_num_samples:
-#             if value_num_samples != 0:
-#                 curr_ratio = value_num_samples / num_valid_samples
-#                 partition_potential_information -= curr_ratio * math.log2(curr_ratio)
-#         return partition_potential_information
+    @classmethod
+    def _accept_attribute(cls, real_gain_ratio, num_tests, num_fails_allowed, num_valid_samples,
+                          class_index_num_samples, values_num_samples, original_information):
+        num_classes = len(class_index_num_samples)
+        classes_dist = class_index_num_samples[:]
+        for class_index in range(num_classes):
+            classes_dist[class_index] /= float(num_valid_samples)
+
+        num_fails_seen = 0
+        for test_number in range(1, num_tests + 1):
+            random_contingency_table = cls._generate_random_contingency_table(
+                classes_dist,
+                num_valid_samples,
+                values_num_samples)
+            curr_gain_ratio = cls._calculate_gain_ratio(
+                num_valid_samples,
+                random_contingency_table,
+                values_num_samples,
+                original_information)
+            if curr_gain_ratio > real_gain_ratio:
+                num_fails_seen += 1
+                if num_fails_seen > num_fails_allowed:
+                    return False, test_number
+            if num_tests - test_number <= num_fails_allowed - num_fails_seen:
+                return True, None
+        return True, None

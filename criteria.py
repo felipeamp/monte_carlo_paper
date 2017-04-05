@@ -78,9 +78,6 @@ class GiniGain(Criterion):
                 - Position of the accepted attribute in the attributes' list ordered by the
                 criterion value.
         """
-        # Instead of minimizing the difference between the Gini Index in the current
-        # TreeNode minus the weighted Gini Index of its child TreeNode's, we just maximize
-        # the weighted Gini Index of its children.
         def _remove_duplicate_attributes(best_splits_per_attrib, num_attributes):
             seen_attrib = [False] * num_attributes
             ret = []
@@ -92,6 +89,9 @@ class GiniGain(Criterion):
                 ret.append(best_attrib_split)
             return ret
 
+        # Instead of minimizing the difference between the Gini Index in the current
+        # TreeNode minus the weighted Gini Index of its child TreeNode's, we just maximize
+        # the weighted Gini Index of its children.
         best_splits_per_attrib = []
         has_exactly_two_classes = tree_node.number_non_empty_classes == 2
         cache_values_seen = []

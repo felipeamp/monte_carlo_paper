@@ -141,7 +141,7 @@ class GiniGain(Criterion):
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
-                best_splits_per_attrib = sorted(best_splits_per_attrib, key=lambda x: -x[2])
+                best_splits_per_attrib.sort(key=lambda x: -x[2])
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
@@ -196,7 +196,7 @@ class GiniGain(Criterion):
                     (curr_value,
                      number_second_non_empty,
                      number_second_non_empty/values_num_samples[curr_value]))
-            value_number_ratio = sorted(value_number_ratio, key=lambda tup: tup[2])
+            value_number_ratio.sort(key=lambda tup: tup[2])
             return value_number_ratio
 
         def _calculate_gini_index(num_left_first, num_left_second, num_right_first,
@@ -499,7 +499,7 @@ class Twoing(Criterion):
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
-                best_splits_per_attrib = sorted(best_splits_per_attrib, key=lambda x: -x[2])
+                best_splits_per_attrib.sort( key=lambda x: -x[2])
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
@@ -589,7 +589,7 @@ class Twoing(Criterion):
                 value_number_ratio.append((curr_value,
                                            number_second_non_empty,
                                            number_second_non_empty/values_num_samples[curr_value]))
-            value_number_ratio = sorted(value_number_ratio, key=lambda tup: tup[2])
+            value_number_ratio.sort(key=lambda tup: tup[2])
             return value_number_ratio
 
         def _calculate_gini_index(num_left_first, num_left_second, num_right_first,
@@ -806,7 +806,7 @@ class GainRatio(Criterion):
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
-                best_splits_per_attrib = sorted(best_splits_per_attrib, key=lambda x: -x[2])
+                best_splits_per_attrib.sort(key=lambda x: -x[2])
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):

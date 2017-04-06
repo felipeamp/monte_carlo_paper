@@ -16,6 +16,8 @@ from scipy.stats import chi2
 import monte_carlo
 
 
+#: Minimum number of samples in the two largest entries of a contingency table so that the attribute
+#: is considered valid.
 MIN_ALLOWED_IN_TWO_LARGEST = 40
 
 
@@ -153,8 +155,9 @@ class DecisionTree(object):
                 unkown_value_attrib_index_array)
 
     def train(self, dataset, training_samples_indices, max_depth, min_samples_per_node,
-              use_stop_conditions=False, max_p_value_chi_sq=0.1):
-        """Trains the tree in a recursive fashion, starting at the root's TreeNode.
+              use_stop_conditions=False, max_p_value_chi_sq=0.1, calculate_expected_tests=False):
+        """Trains the tree in a recursive fashion, starting at the root's TreeNode. Afterwards,
+        prunes the trivial subtrees.
 
         Args:
             dataset (Dataset): dataset containing the samples used for training.
@@ -176,6 +179,8 @@ class DecisionTree(object):
             max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
                 be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
+            calculate_expected_tests (bool, optional): indicates wether we should calculate the
+                expected number of tests done by our monte carlo framework. Defaults to `False`.
         """
         self._dataset = dataset
         print('Starting tree training...')
@@ -189,7 +194,8 @@ class DecisionTree(object):
                                    is_monte_carlo_criterion=self._is_monte_carlo_criterion,
                                    upper_p_value_threshold=self._upper_p_value_threshold,
                                    lower_p_value_threshold=self._lower_p_value_threshold,
-                                   prob_monte_carlo=self._prob_monte_carlo)
+                                   prob_monte_carlo=self._prob_monte_carlo,
+                                   calculate_expected_tests=calculate_expected_tests)
         self._root_node.create_subtree(self._criterion)
         print('Starting prunning trivial subtrees...')
         self._root_node.prune_trivial_subtrees()
@@ -197,7 +203,7 @@ class DecisionTree(object):
 
     def train_and_test(self, dataset, training_samples_indices, validation_sample_indices,
                        max_depth, min_samples_per_node, use_stop_conditions=False,
-                       max_p_value_chi_sq=0.1):
+                       max_p_value_chi_sq=0.1, calculate_expected_tests=False):
         """Trains a tree with part of the dataset (training samples) and tests the tree
         classification in another part (validation samples).
 
@@ -226,6 +232,8 @@ class DecisionTree(object):
             max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
                 be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
+            calculate_expected_tests (bool, optional): indicates wether we should calculate the
+                expected number of tests done by our monte carlo framework. Defaults to `False`.
 
         Returns:
             A tuple containing the tree's max depth in the second entry and, in the first entry,
@@ -251,7 +259,8 @@ class DecisionTree(object):
                    max_depth,
                    min_samples_per_node,
                    use_stop_conditions,
-                   max_p_value_chi_sq)
+                   max_p_value_chi_sq,
+                   calculate_expected_tests)
         max_depth = self.get_root_node().get_max_depth()
         return (self._classify_samples(self._dataset.samples,
                                        self._dataset.sample_class,
@@ -634,7 +643,7 @@ class TreeNode(object):
         total_expected_num_tests (float): total number of expected tests to be done at this node, in
             the worst-case p-value distribution.
         time_num_tests_fails (float): time taken to calculate the value of
-            `total_expected_num_tests`, in seconds.
+            `num_tests` and `num_fails_allowed`, in seconds.
         time_expected_tests (float): time taken to calculate the value of
             `total_expected_num_tests`, in seconds.
     """
@@ -693,6 +702,8 @@ class TreeNode(object):
         self.lower_p_value_threshold = lower_p_value_threshold
         self.prob_monte_carlo = prob_monte_carlo
 
+        self.num_tests = 0
+        self.num_fails_allowed = 0
         self.total_expected_num_tests = 0
         self.time_num_tests_fails = 0.0
         self.time_expected_tests = 0.0
@@ -701,7 +712,6 @@ class TreeNode(object):
         self._min_samples_per_node = min_samples_per_node
 
         self.is_leaf = True
-        self._is_trivial = None
         self.node_split = None
         self.nodes = []
         self.contingency_tables = None
@@ -870,15 +880,12 @@ class TreeNode(object):
         if self.is_monte_carlo_criterion:
             start_time = timeit.default_timer()
             num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
-            (num_tests, num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
+            (self.num_tests, self.num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
                 self.upper_p_value_threshold,
                 self.lower_p_value_threshold,
                 self.prob_monte_carlo,
                 num_valid_nominal_attributes)
             self.time_num_tests_fails = timeit.default_timer() - start_time
-        else:
-            num_tests = 0
-            num_fails_allowed = 0
 
         if self.calculate_expected_tests:
             start_time = timeit.default_timer()
@@ -894,9 +901,11 @@ class TreeNode(object):
         # Get best split. Note that self is the current TreeNode.
         (separation_attrib_index,
          splits_values,
-         criterion_value) = criterion.select_best_attribute_and_split(self,
-                                                                      num_tests,
-                                                                      num_fails_allowed)
+         criterion_value,
+         total_num_tests_needed,
+         accepted_position) = criterion.select_best_attribute_and_split(self,
+                                                                        self.num_tests,
+                                                                        self.num_fails_allowed)
 
         if math.isinf(criterion_value):
             # Stop condition for Max Cut tree: above p_value or no valid attribute index with more
@@ -918,7 +927,9 @@ class TreeNode(object):
                                         None,
                                         None,
                                         criterion_value,
-                                        mid_point)
+                                        total_num_tests_needed=0,
+                                        accepted_position=1,
+                                        mid_point=mid_point)
 
         else:
             # NOMINAL ATTRIBUTE
@@ -936,7 +947,9 @@ class TreeNode(object):
             self.node_split = NodeSplit(separation_attrib_index,
                                         splits_values,
                                         values_to_split,
-                                        criterion_value)
+                                        criterion_value,
+                                        total_num_tests_needed,
+                                        accepted_position)
 
         # Create subtrees
         self.is_leaf = False
@@ -979,7 +992,7 @@ class TreeNode(object):
 
         If a TreeNode is trivial, that is, every leaf in its subtree has the same
         `most_common_int_class`, then the current TreeNode becomes a leaf with this class, deleting
-        every child node in this process. Is applied recursively.
+        every child node in this process. It is applied recursively.
         """
         if not self.is_leaf:
             children_classes = set()
@@ -1076,9 +1089,13 @@ class NodeSplit(object):
         criterion_value (float): criterion value for this split.
         mid_point (float): cut point for numeric splits. Will be the average between the largest
             value on the left split and the smallest value on the right split.
+        total_num_tests_needed (int): Number of tests needed before the Monte Carlo framework
+            accepted an attribute.
+        accepted_position (int): Position of the attribute accepted by the Monte Carlo Framework.
+            Starts counting at `1`.
     """
     def __init__(self, separation_attrib_index, splits_values, values_to_split, criterion_value,
-                 mid_point=None):
+                 total_num_tests_needed, accepted_position, mid_point=None):
         """Initializes a TreeNode instance with the given arguments.
 
         Args:
@@ -1089,6 +1106,10 @@ class NodeSplit(object):
             values_to_split (:obj:'dict' of 'int'): reversed index for `splits_values`. Given a
                 value, it returns the index of the split that this value belongs to.
             criterion_value (float): optimal criterion value obtained for this TreeNode.
+            total_num_tests_needed (int): Number of tests needed before the Monte Carlo framework
+                accepted an attribute.
+            accepted_position (int): Position of the attribute accepted by the Monte Carlo
+                Framework. Starts counting at `1`.
             mid_point (float, optional): cut point for numeric splits. Will be the average between
                 the largest value on the left split and the smallest value on the right split. Not
                 used for splits that use nominal attributes. Defaults to `None`.
@@ -1097,4 +1118,6 @@ class NodeSplit(object):
         self.splits_values = splits_values
         self.values_to_split = values_to_split
         self.criterion_value = criterion_value
+        self.total_num_tests_needed = total_num_tests_needed
+        self.accepted_position = accepted_position
         self.mid_point = mid_point

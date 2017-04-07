@@ -295,13 +295,13 @@ if __name__ == '__main__':
                        'Number of folds',
 
                        'Uses Chi-Square Test',
-                       'Maximum p-value Allowed by Chi-Square Test',
+                       'Maximum p-value Allowed by Chi-Square Test [between 0 and 1]',
 
                        'Uses Monte Carlo',
                        'Are Attributes in Random Order?',
-                       'U',
-                       'L',
-                       'prob_monte_carlo',
+                       'U [between 0 and 1]',
+                       'L [between 0 and 1]',
+                       'prob_monte_carlo [between 0 and 1]',
 
                        'Average Number of Valid Attributes in Root Node (m)',
                        'Maximum Number of Valid Attributes in Root Node (m)',
@@ -317,8 +317,8 @@ if __name__ == '__main__':
 
                        'Average Total Time Taken [s]',
 
-                       'Average Accuracy (with missing values)',
-                       'Average Accuracy (without missing values)',
+                       'Average Accuracy Percentage (with missing values)',
+                       'Average Accuracy Percentage (without missing values)',
                        'Average Number of Samples Classified using Unkown Value',
 
                        'Average Number of Nodes Pruned']

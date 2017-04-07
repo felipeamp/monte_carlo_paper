@@ -88,7 +88,8 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
                                          calculate_expected_tests=use_monte_carlo)
         total_time_taken = timeit.default_timer() - start_time
 
-        while sorted(tree.get_root_node().class_index_num_samples)[-2] == 0:
+        while (sorted(tree.get_root_node().class_index_num_samples)[-2] == 0
+               or sum(tree.get_root_node().valid_nominal_attribute) == 0):
             random.shuffle(training_samples_indices)
             curr_training_samples_indices = training_samples_indices[:num_samples]
             curr_test_samples_indices = training_samples_indices[num_samples: 2 * num_samples]
@@ -207,6 +208,7 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_ch
                  str(np.mean(theoretical_e_over_m_array)),
                  str(np.amax(theoretical_e_over_m_array)),
                  str(np.amin(theoretical_e_over_m_array)),
+                 str(np.std(theoretical_e_over_m_array)),
 
                  str(np.mean(e_array)),
                  str(np.amax(e_array)),
@@ -370,16 +372,16 @@ if __name__ == '__main__':
                        'Number of Samples',
                        'Number of Trials',
                        'Criterion',
-                       'Number of Samples Forcing a Leaf',
+                       'Number of Samples to Force a Leaf',
 
                        'Uses Chi-Square Test',
-                       'Maximum p-value Allowed by Chi-Square Test',
+                       'Maximum p-value Allowed by Chi-Square Test [between 0 and 1]',
 
                        'Uses Monte Carlo',
                        'Are Attributes in Random Order?',
-                       'U',
-                       'L',
-                       'prob_monte_carlo',
+                       'U [between 0 and 1]',
+                       'L [between 0 and 1]',
+                       'prob_monte_carlo [between 0 and 1]',
 
                        'Average Number of Tests (t)',
                        'Maximum Number of Tests (t)',
@@ -415,15 +417,15 @@ if __name__ == '__main__':
                        'Standard Deviation of Position of Accepted Attribute',
 
                        'Average Total Time Taken [s]',
-                       'Average Time Taken to Create Tree',
-                       'Average Time Taken Prunning Trivial Subtrees',
-                       'Average Time Taken to Calculate t and f',
-                       'Average Time Taken to Calculate E',
+                       'Average Time Taken to Create Tree [s]',
+                       'Average Time Taken Prunning Trivial Subtrees [s]',
+                       'Average Time Taken to Calculate t and f [s]',
+                       'Average Time Taken to Calculate E [s]',
 
-                       'Average Accuracy (with missing values)',
-                       'Average Accuracy (without missing values)',
-
+                       'Average Accuracy Percentage (with missing values)',
+                       'Average Accuracy Percentage (without missing values)',
                        'Average Number of Samples with Unkown Values for Accepted Attribute',
+
                        'Average Number of Nodes Pruned']
 
         print(OUTPUT_SPLIT_CHAR.join(FIELDS_LIST), file=FOUT)

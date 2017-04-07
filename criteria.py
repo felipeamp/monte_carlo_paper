@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """Module containing all criteria available for tests.
+
+
 """
 
 import abc
@@ -12,8 +14,11 @@ import random
 import numpy as np
 
 
+#: Maximum "time complexity" allowed when generating an attribute best split.
 LIMIT_EXPONENTIAL_STEPS = 50000000
+#: Maximum log2 of "time complexity" allowed when generating an attribute best split.
 LOG2_LIMIT_EXPONENTIAL_STEPS = 25
+#: Whether Monte Carlo Framework should order attributes randomly or in decreasing criterion value.
 ORDER_RANDOMLY = False
 
 class Criterion(object):

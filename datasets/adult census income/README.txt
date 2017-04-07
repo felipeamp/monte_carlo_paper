@@ -12,8 +12,8 @@
     Prediction task is to determine whether a person makes over 50K
     a year.
 
-5. Number of Instances: 48842 instances, mix of continuous and discrete (train=32561, test=16281)
-| 45222 if instances with unknown values are removed (train=30162, test=15060)
+5. Number of Instances: 48842 instances, mix of continuous and discrete
+                        45222 if instances with unknown values are removed
 
 6. Number of Attributes: 14
 

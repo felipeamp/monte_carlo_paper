@@ -524,11 +524,11 @@ class DecisionTree(object):
         if self._root_node is None:
             print('Decision tree must be trained before testing.')
             sys.exit(1)
-        return self._classify_samples(self._dataset.test_samples,
-                                      self._dataset.test_sample_class,
-                                      self._dataset.test_sample_costs,
+        return self._classify_samples(self._dataset.samples,
+                                      self._dataset.sample_class,
+                                      self._dataset.sample_costs,
                                       test_sample_indices,
-                                      self._dataset.test_sample_index_to_key)
+                                      self._dataset.sample_index_to_key)
 
     def test_from_csv(self, test_dataset_csv_filepath, key_attrib_index, class_attrib_index,
                       split_char, missing_value_string):

@@ -334,8 +334,6 @@ class DecisionTree(object):
                 - the number of samples classified with unkown values;
                 - list where the i-th entry has the attribute index used for classification of the
                     i-th sample when an unkown value occurred;
-                - list containing the nodes information (see TreeNode.get_nodes_infos()) for each
-                    fold;
                 - list containing the time spent prunning in each fold;
                 - list containing the number of nodes prunned in each fold;
                 - list containing the maximum tree depth for each fold;
@@ -354,13 +352,10 @@ class DecisionTree(object):
         max_depth_per_fold = []
         num_nodes_per_fold = []
         num_valid_attributes_in_root = []
-
-        fold_count = 0
-
-        nodes_infos_per_fold = []
-
         time_taken_prunning_per_fold = []
         num_nodes_prunned_per_fold = []
+
+        fold_count = 0
 
         sample_indices_and_classes = list(enumerate(dataset.sample_class))
         if seed is not None:
@@ -420,7 +415,6 @@ class DecisionTree(object):
                 num_unkown += curr_num_unkown
 
                 fold_count += 1
-                nodes_infos_per_fold.append(self._root_node.get_nodes_infos())
                 time_taken_prunning_per_fold.append(curr_time_taken_prunning)
                 num_nodes_prunned_per_fold.append(curr_num_nodes_prunned)
 
@@ -469,7 +463,6 @@ class DecisionTree(object):
                 num_unkown += curr_num_unkown
 
                 fold_count += 1
-                nodes_infos_per_fold.append(self._root_node.get_nodes_infos())
                 time_taken_prunning_per_fold.append(curr_time_taken_prunning)
                 num_nodes_prunned_per_fold.append(curr_num_nodes_prunned)
 
@@ -487,7 +480,6 @@ class DecisionTree(object):
                  classified_with_unkown_value_array,
                  num_unkown,
                  unkown_value_attrib_index_array,
-                 nodes_infos_per_fold,
                  time_taken_prunning_per_fold,
                  num_nodes_prunned_per_fold,
                  max_depth_per_fold,
@@ -1008,8 +1000,10 @@ class TreeNode(object):
             self.nodes[-1].create_subtree(criterion)
 
     def get_most_popular_subtree(self):
-        """Returns the number of samples in the most popular subtree. It should NOT be called in a
-        leaf node (otherwise the program will exit)."""
+        """Returns the number of samples in the most popular subtree. If it is leaf, returns
+        `self.num_valid_samples`."""
+        if self.is_leaf:
+            return self.num_valid_samples
         return max(subtree.num_valid_samples for subtree in self.nodes)
 
     def get_subtree_time_num_tests_fails(self):
@@ -1047,53 +1041,6 @@ class TreeNode(object):
                 num_prunned += num_trivial_children
                 self.nodes = []
         return num_prunned
-
-    def get_nodes_infos(self, max_depth=3):
-        """Get information about nodes in the tree, up to `max_depth`.
-
-        Used in some experiments to see which splits are obtained using different criteria.
-
-        Args:
-            max_depth (int, optional): Maximum depth to which we want information about every node.
-                Defaults to `3`.
-
-        Returns:
-            A list containing, in order:
-                - A list containing the NodeSplit's for every node starting at the current TreeNode
-                    all the way to `max_depth` depth;
-                - the number of nodes in the tree rooted at the current NodeSplit.
-        """
-        return [self.get_nodes_attributes(max_depth), self.get_num_nodes()]
-
-    def get_nodes_attributes(self, max_depth_remaining=3):
-        """ Get information about nodes in the tree, up to `max_depth`.
-
-        Used in some experiments to see which splits are obtained using different criteria.
-
-        Args:
-            max_depth (int, optional): Maximum depth to which we want information about every node.
-                Defaults to `3`.
-
-        Returns:
-            A list containing the NodeSplit's for every node starting at the current TreeNode all
-            the way to `max_depth` depth.
-        """
-        def _get_info_aux(node, max_depth_remaining, ret):
-            if max_depth_remaining == 0:
-                return
-            if node.node_split is None or node.node_split.separation_attrib_index is None:
-                ret += [(None, None, True)] * (2**max_depth_remaining - 1)
-                return
-            max_split_ratio = node.get_most_popular_subtree() / node.num_valid_samples
-            ret.append((node.node_split.separation_attrib_index,
-                        max_split_ratio,
-                        self.is_leaf))
-            _get_info_aux(node.nodes[0], max_depth_remaining - 1, ret)
-            _get_info_aux(node.nodes[1], max_depth_remaining - 1, ret)
-
-        ret = []
-        _get_info_aux(self, max_depth_remaining, ret)
-        return ret
 
     def get_num_nodes(self):
         """Returns the number of nodes in the tree rooted at the current TreeNode (counting includes

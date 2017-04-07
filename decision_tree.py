@@ -1008,8 +1008,10 @@ class TreeNode(object):
             self.nodes[-1].create_subtree(criterion)
 
     def get_most_popular_subtree(self):
-        """Returns the number of samples in the most popular subtree. It should NOT be called in a
-        leaf node (otherwise the program will exit)."""
+        """Returns the number of samples in the most popular subtree. If it is leaf, returns
+        `self.num_valid_samples`."""
+        if self.is_leaf:
+            return self.num_valid_samples
         return max(subtree.num_valid_samples for subtree in self.nodes)
 
     def get_subtree_time_num_tests_fails(self):
@@ -1088,8 +1090,8 @@ class TreeNode(object):
             ret.append((node.node_split.separation_attrib_index,
                         max_split_ratio,
                         self.is_leaf))
-            _get_info_aux(node.nodes[0], max_depth_remaining - 1, ret)
-            _get_info_aux(node.nodes[1], max_depth_remaining - 1, ret)
+            for child_node in node.nodes:
+                _get_info_aux(child_node, max_depth_remaining - 1, ret)
 
         ret = []
         _get_info_aux(self, max_depth_remaining, ret)

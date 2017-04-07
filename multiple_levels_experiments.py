@@ -281,7 +281,7 @@ if __name__ == '__main__':
 
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
-        'outputs from datasets',
+        'outputs',
         'multiple_levels_experiment_1.csv')
 
     with open(OUTPUT_CSV_FILEPATH, 'a') as FOUT:

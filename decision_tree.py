@@ -338,7 +338,9 @@ class DecisionTree(object):
                     fold;
                 - list containing the time spent prunning in each fold;
                 - list containing the number of nodes prunned in each fold;
-                - list containing the maximum tree depth for each fold.
+                - list containing the maximum tree depth for each fold;
+                - list containing the number of nodes per fold, after prunning;
+                - list containing the number of valid attributes in root node in each fold.
         """
 
         classifications = [0] * dataset.num_samples
@@ -350,6 +352,8 @@ class DecisionTree(object):
         num_unkown = 0
         unkown_value_attrib_index_array = [0] * dataset.num_samples
         max_depth_per_fold = []
+        num_nodes_per_fold = []
+        num_valid_attributes_in_root = []
 
         fold_count = 0
 
@@ -400,6 +404,9 @@ class DecisionTree(object):
                                                                max_p_value_chi_sq)
 
                 max_depth_per_fold.append(curr_max_depth)
+                num_nodes_per_fold.append(self.get_root_node().get_num_nodes())
+                num_valid_attributes_in_root.append(
+                    sum(self._root_node.valid_nominal_attribute))
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
                     classifications[validation_sample_index] = curr_classifications[curr_index]
                     classified_with_unkown_value_array[validation_sample_index] = (
@@ -446,6 +453,9 @@ class DecisionTree(object):
                                                                max_p_value_chi_sq)
 
                 max_depth_per_fold.append(curr_max_depth)
+                num_nodes_per_fold.append(self.get_root_node().get_num_nodes())
+                num_valid_attributes_in_root.append(
+                    sum(self._root_node.valid_nominal_attribute))
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
                     classifications[validation_sample_index] = curr_classifications[curr_index]
                     classified_with_unkown_value_array[validation_sample_index] = (
@@ -480,7 +490,9 @@ class DecisionTree(object):
                  nodes_infos_per_fold,
                  time_taken_prunning_per_fold,
                  num_nodes_prunned_per_fold,
-                 max_depth_per_fold)
+                 max_depth_per_fold,
+                 num_nodes_per_fold,
+                 num_valid_attributes_in_root)
 
     def test(self, test_sample_indices):
         """Tests the (already trained) tree over samples from the same dataset as the

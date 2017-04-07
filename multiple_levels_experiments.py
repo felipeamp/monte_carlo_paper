@@ -8,7 +8,6 @@
 import datetime
 import itertools
 import os
-import random
 import timeit
 
 import criteria
@@ -22,116 +21,39 @@ import numpy as np
 RANDOM_SEED = 65537
 #: Character used to split cells in the output csv file.
 OUTPUT_SPLIT_CHAR = ','
-#: Maximum depth allowed for the tree to grow.
-MAX_DEPTH = 1
-#: Minimum number of samples allowed in a TreeNode and still allowing it to split during training.
-MIN_NUM_SAMPLES_ALLOWED = 1
+#: Number of folds to be used during cross-validation.
+NUM_FOLDS = 10
 
 
-def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, num_trials,
-                           use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
-                           upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo,
-                           output_file_descriptor, output_split_char, seed=RANDOM_SEED):
+def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples,
+                           min_num_samples_allowed, max_depth, num_trials, use_chi_sq_test,
+                           max_p_value_chi_sq, use_monte_carlo, upper_p_value_threshold,
+                           lower_p_value_threshold, prob_monte_carlo, output_file_descriptor,
+                           output_split_char, seed=RANDOM_SEED):
     """Runs `num_trials` experiments, each one randomly selecting `num_samples` valid samples to use
     for training and testing the tree in the rest of the dataset. Saves the training and
     classification information in the `output_file_descriptor` file.
     """
-    if seed is not None:
-        random.seed(seed)
-        np.random.seed(seed)
-
-    training_samples_indices = list(range(train_dataset.num_samples))
-
     num_valid_attributes_list = []
 
-    num_tests_list = []
-    num_fails_allowed_list = []
-
-    theoretical_e_over_m_list = []
-    e_list = []
-    e_over_m_list = []
-
-    num_times_accepted = 0
-    accepted_position_list = []
+    num_nodes_list = []
+    tree_depth_list = []
 
     total_time_taken_list = []
-    time_taken_tree_list = []
-    time_taken_prunning_list = []
-    time_taken_num_tests_fails_list = []
-    time_taken_expected_tests_list = []
 
     accuracy_with_missing_values_list = []
     accuracy_without_missing_values_list = []
-    num_samples_missing_values_list = []
+    num_unkown_list = []
     num_nodes_pruned_list = []
 
     for _ in range(num_trials):
-        random.shuffle(training_samples_indices)
-        curr_training_samples_indices = training_samples_indices[:num_samples]
-        curr_test_samples_indices = training_samples_indices[num_samples:]
-
         tree = decision_tree.DecisionTree(criterion=criterion,
                                           is_monte_carlo_criterion=use_monte_carlo,
                                           upper_p_value_threshold=upper_p_value_threshold,
                                           lower_p_value_threshold=lower_p_value_threshold,
                                           prob_monte_carlo=prob_monte_carlo)
 
-        # First let's train the tree and save the training information
         start_time = timeit.default_timer()
-        (time_taken_prunning,
-         num_nodes_prunned) = tree.train(dataset=train_dataset,
-                                         training_samples_indices=curr_training_samples_indices,
-                                         max_depth=MAX_DEPTH,
-                                         min_samples_per_node=MIN_NUM_SAMPLES_ALLOWED,
-                                         use_stop_conditions=use_chi_sq_test,
-                                         max_p_value_chi_sq=max_p_value_chi_sq,
-                                         calculate_expected_tests=use_monte_carlo)
-        total_time_taken = timeit.default_timer() - start_time
-
-        while sorted(tree.get_root_node().class_index_num_samples)[-2] == 0:
-            random.shuffle(training_samples_indices)
-            curr_training_samples_indices = training_samples_indices[:num_samples]
-            curr_test_samples_indices = training_samples_indices[num_samples: 2 * num_samples]
-
-            start_time = timeit.default_timer()
-            (time_taken_prunning,
-             num_nodes_prunned) = tree.train(dataset=train_dataset,
-                                             training_samples_indices=curr_training_samples_indices,
-                                             max_depth=MAX_DEPTH,
-                                             min_samples_per_node=MIN_NUM_SAMPLES_ALLOWED,
-                                             use_stop_conditions=use_chi_sq_test,
-                                             max_p_value_chi_sq=max_p_value_chi_sq,
-                                             calculate_expected_tests=use_monte_carlo)
-            total_time_taken = timeit.default_timer() - start_time
-
-        num_valid_attributes_list.append(sum(tree.get_root_node().valid_nominal_attribute))
-
-        root_node = tree.get_root_node()
-
-        num_tests_list.append(root_node.num_tests)
-        num_fails_allowed_list.append(root_node.num_fails_allowed)
-        theoretical_e_over_m_list.append(
-            root_node.total_expected_num_tests / num_valid_attributes_list[-1])
-
-        if root_node.node_split is not None:
-            num_times_accepted += 1
-            e_list.append(root_node.node_split.total_num_tests_needed)
-            e_over_m_list.append(
-                root_node.node_split.total_num_tests_needed / num_valid_attributes_list[-1])
-            accepted_position_list.append(root_node.node_split.accepted_position)
-
-        total_time_taken_list.append(total_time_taken)
-        time_taken_prunning_list.append(time_taken_prunning)
-        time_taken_num_tests_fails_list.append(root_node.get_subtree_time_num_tests_fails())
-        time_taken_expected_tests_list.append(root_node.get_subtree_time_expected_tests())
-        time_taken_tree_list = (total_time_taken
-                                - time_taken_prunning_list[-1]
-                                - time_taken_num_tests_fails_list[-1]
-                                - time_taken_expected_tests_list[-1])
-
-        num_nodes_pruned_list.append(num_nodes_prunned)
-
-        # Time to test this tree's classification and save the classification information
         (_,
          num_correct_classifications_w_unkown,
          num_correct_classifications_wo_unkown,
@@ -139,40 +61,53 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
          _,
          _,
          num_unkown,
-         _) = tree.test(curr_test_samples_indices)
+         _,
+         _,
+         _,
+         num_nodes_prunned_per_fold,
+         max_depth_per_fold,
+         num_nodes_per_fold,
+         num_valid_attributes_in_root) = tree.cross_validate(
+             dataset=train_dataset,
+             num_folds=NUM_FOLDS,
+             max_depth=max_depth,
+             min_samples_per_node=min_num_samples_allowed,
+             is_stratified=True,
+             print_tree=False,
+             seed=seed,
+             print_samples=False,
+             use_stop_conditions=use_chi_sq_test,
+             max_p_value_chi_sq=max_p_value_chi_sq)
+        total_time_taken = timeit.default_timer() - start_time
+        total_time_taken_list.append(total_time_taken)
 
-        accuracy_with_missing_values_list.append(
-            num_correct_classifications_w_unkown / len(curr_test_samples_indices))
+        num_valid_attributes_list += num_valid_attributes_in_root
+        num_nodes_pruned_list += num_nodes_prunned_per_fold
+        tree_depth_list += max_depth_per_fold
+        num_nodes_list += num_nodes_per_fold
+
+        accuracy_with_missing_values_list.append(num_correct_classifications_w_unkown / num_samples)
         accuracy_without_missing_values_list.append(
-            num_correct_classifications_wo_unkown / len(curr_test_samples_indices))
-        num_samples_missing_values_list.append(num_unkown)
+            num_correct_classifications_wo_unkown / num_samples)
+        num_unkown_list.append(num_unkown)
 
-    save_fold_info(dataset_name, num_samples, num_trials, criterion.name, use_chi_sq_test,
-                   max_p_value_chi_sq, use_monte_carlo, criteria.ORDER_RANDOMLY,
-                   upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo,
-                   np.array(num_tests_list), np.array(num_fails_allowed_list),
-                   np.array(num_valid_attributes_list), np.array(theoretical_e_over_m_list),
-                   np.array(e_list), np.array(e_over_m_list), np.array(accepted_position_list),
-                   num_times_accepted, np.array(total_time_taken_list),
-                   np.array(time_taken_tree_list), np.array(time_taken_prunning_list),
-                   np.array(time_taken_num_tests_fails_list),
-                   np.array(time_taken_expected_tests_list),
+    save_fold_info(dataset_name, num_samples, num_trials, criterion.name, min_num_samples_allowed,
+                   max_depth, use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
+                   criteria.ORDER_RANDOMLY, upper_p_value_threshold, lower_p_value_threshold,
+                   prob_monte_carlo, np.array(num_valid_attributes_list), np.array(num_nodes_list),
+                   np.array(tree_depth_list), np.array(total_time_taken_list),
                    np.array(accuracy_with_missing_values_list),
-                   np.array(accuracy_without_missing_values_list),
-                   np.array(num_samples_missing_values_list), np.array(num_nodes_pruned_list),
-                   output_split_char, output_file_descriptor)
+                   np.array(accuracy_without_missing_values_list), np.array(num_unkown_list),
+                   np.array(num_nodes_pruned_list), output_split_char, output_file_descriptor)
 
 
-def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_chi_sq_test,
-                   max_p_value_chi_sq, use_monte_carlo, is_random_ordering, upper_p_value_threshold,
-                   lower_p_value_threshold, prob_monte_carlo, num_tests_array,
-                   num_fails_allowed_array, num_valid_attributes_array, theoretical_e_over_m_array,
-                   e_array, e_over_m_array, accepted_position_array, num_times_accepted,
-                   total_time_taken_array, time_taken_tree_array, time_taken_prunning_array,
-                   time_taken_num_tests_fails_array, time_taken_expected_tests_array,
-                   accuracy_with_missing_values_array, accuracy_without_missing_values_array,
-                   num_samples_missing_values_array, num_nodes_pruned_array, output_split_char,
-                   output_file_descriptor):
+def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, min_num_samples_allowed,
+                   max_depth, use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
+                   is_random_ordering, upper_p_value_threshold, lower_p_value_threshold,
+                   prob_monte_carlo, num_valid_attributes_array, num_nodes_array, tree_depth_array,
+                   total_time_taken_array, accuracy_with_missing_values_array,
+                   accuracy_without_missing_values_array, num_unkown_array, num_nodes_pruned_array,
+                   output_split_char, output_file_descriptor):
     """Saves the experiment information in the CSV file.
     """
     assert num_trials > 0
@@ -181,7 +116,9 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_ch
                  str(num_samples),
                  str(num_trials),
                  criterion_name,
-                 MIN_NUM_SAMPLES_ALLOWED,
+                 min_num_samples_allowed,
+                 max_depth,
+                 NUM_FOLDS,
 
                  str(use_chi_sq_test),
                  str(max_p_value_chi_sq),
@@ -192,47 +129,23 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_ch
                  str(lower_p_value_threshold),
                  str(prob_monte_carlo),
 
-                 str(np.mean(num_tests_array)),
-                 str(np.amax(num_tests_array)),
-                 str(np.amin(num_tests_array)),
-
-                 str(np.mean(num_fails_allowed_array)),
-                 str(np.amax(num_fails_allowed_array)),
-                 str(np.amin(num_fails_allowed_array)),
-
                  str(np.mean(num_valid_attributes_array)),
                  str(np.amax(num_valid_attributes_array)),
                  str(np.amin(num_valid_attributes_array)),
 
-                 str(np.mean(theoretical_e_over_m_array)),
-                 str(np.amax(theoretical_e_over_m_array)),
-                 str(np.amin(theoretical_e_over_m_array)),
+                 str(np.mean(num_nodes_array)),
+                 str(np.amax(num_nodes_array)),
+                 str(np.amin(num_nodes_array)),
 
-                 str(np.mean(e_array)),
-                 str(np.amax(e_array)),
-                 str(np.amin(e_array)),
-                 str(np.std(e_array)),
-
-                 str(np.mean(e_over_m_array)),
-                 str(np.amax(e_over_m_array)),
-                 str(np.amin(e_over_m_array)),
-                 str(np.std(e_over_m_array)),
-
-                 str(num_times_accepted),
-                 str(np.mean(accepted_position_array)),
-                 str(np.amax(accepted_position_array)),
-                 str(np.amin(accepted_position_array)),
-                 str(np.std(accepted_position_array)),
+                 str(np.mean(tree_depth_array)),
+                 str(np.amax(tree_depth_array)),
+                 str(np.amin(tree_depth_array)),
 
                  str(np.mean(total_time_taken_array)),
-                 str(np.mean(time_taken_tree_array)),
-                 str(np.mean(time_taken_prunning_array)),
-                 str(np.mean(time_taken_num_tests_fails_array)),
-                 str(np.mean(time_taken_expected_tests_array)),
 
                  str(np.mean(accuracy_with_missing_values_array)),
                  str(np.mean(accuracy_without_missing_values_array)),
-                 str(np.mean(num_samples_missing_values_array)),
+                 str(np.mean(num_unkown_array)),
 
                  str(np.mean(num_nodes_pruned_array))]
 
@@ -240,9 +153,10 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_ch
 
 
 def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_indices, split_chars,
-         missing_value_strings, num_samples, num_trials, use_chi_sq_test, max_p_value_chi_sq,
-         use_monte_carlo, use_random_ordering, upper_p_value_threshold, lower_p_value_threshold,
-         prob_monte_carlo, output_csv_filepath, output_split_char=OUTPUT_SPLIT_CHAR):
+         missing_value_strings, num_samples, min_num_samples_allowed, max_depth, num_trials,
+         use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo, use_random_ordering,
+         upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo, output_csv_filepath,
+         output_split_char=OUTPUT_SPLIT_CHAR):
     with open(output_csv_filepath, 'a') as fout:
         for dataset_number, filepath in enumerate(datasets_filepaths):
             if not os.path.exists(filepath) or not os.path.isfile(filepath):
@@ -262,6 +176,8 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    train_dataset,
                                    criteria.GiniGain(),
                                    num_samples,
+                                   min_num_samples_allowed,
+                                   max_depth,
                                    num_trials,
                                    use_chi_sq_test,
                                    max_p_value_chi_sq,
@@ -279,6 +195,8 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    train_dataset,
                                    criteria.GiniGain(),
                                    num_samples,
+                                   min_num_samples_allowed,
+                                   max_depth,
                                    num_trials,
                                    use_chi_sq_test,
                                    max_p_value_chi_sq,
@@ -296,6 +214,8 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    train_dataset,
                                    criteria.GiniGain(),
                                    num_samples,
+                                   min_num_samples_allowed,
+                                   max_depth,
                                    num_trials,
                                    use_chi_sq_test,
                                    max_p_value_chi_sq,
@@ -362,7 +282,7 @@ if __name__ == '__main__':
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
         'outputs from datasets',
-        'single_level_experiment_1.csv')
+        'multiple_levels_experiment_1.csv')
 
     with open(OUTPUT_CSV_FILEPATH, 'a') as FOUT:
         FIELDS_LIST = ['Date Time',
@@ -371,6 +291,8 @@ if __name__ == '__main__':
                        'Number of Trials',
                        'Criterion',
                        'Number of Samples Forcing a Leaf',
+                       'Maximum Depth Allowed',
+                       'Number of folds',
 
                        'Uses Chi-Square Test',
                        'Maximum p-value Allowed by Chi-Square Test',
@@ -381,49 +303,24 @@ if __name__ == '__main__':
                        'L',
                        'prob_monte_carlo',
 
-                       'Average Number of Tests (t)',
-                       'Maximum Number of Tests (t)',
-                       'Minimum Number of Tests (t)',
+                       'Average Number of Valid Attributes in Root Node (m)',
+                       'Maximum Number of Valid Attributes in Root Node (m)',
+                       'Minimum Number of Valid Attributes in Root Node (m)',
 
-                       'Average Number of Fails Allowed (f - 1)',
-                       'Maximum Number of Fails Allowed (f - 1)',
-                       'Minimum Number of Fails Allowed (f - 1)',
+                       'Average Number of Nodes (after prunning)',
+                       'Maximum Number of Nodes (after prunning)',
+                       'Minimum Number of Nodes (after prunning)',
 
-                       'Average Number of Valid Attributes (m)',
-                       'Maximum Number of Valid Attributes (m)',
-                       'Minimum Number of Valid Attributes (m)',
-
-                       'Average Theoretical Number of Tests per Attribute (E/m)',
-                       'Maximum Theoretical Number of Tests per Attribute (E/m)',
-                       'Minimum Theoretical Number of Tests per Attribute (E/m)',
-                       'Standard Deviation of Theoretical Number of Tests per Attribute (sd(E/m))',
-
-                       'Average Number of Tests Needed (E)',
-                       'Maximum Number of Tests Needed (E)',
-                       'Minimum Number of Tests Needed (E)',
-                       'Standard Deviation of Number of Tests Needed (sd(E))',
-
-                       'Average Number of Tests Needed per Attribute(E/m)',
-                       'Maximum Number of Tests Needed per Attribute (E/m)',
-                       'Minimum Number of Tests Needed per Attribute (E/m)',
-                       'Standard Deviation of Number of Tests Needed per Attribute (sd(E/m))',
-
-                       'Number of Experiments with Accepted Attributes',
-                       'Average Position of Accepted Attribute',
-                       'Min Position of Accepted Attribute',
-                       'Max Position of Accepted Attribute',
-                       'Standard Deviation of Position of Accepted Attribute',
+                       'Average Tree Depth (after prunning)',
+                       'Maximum Tree Depth (after prunning)',
+                       'Minimum Tree Depth (after prunning)',
 
                        'Average Total Time Taken [s]',
-                       'Average Time Taken to Create Tree',
-                       'Average Time Taken Prunning Trivial Subtrees',
-                       'Average Time Taken to Calculate t and f',
-                       'Average Time Taken to Calculate E',
 
                        'Average Accuracy (with missing values)',
                        'Average Accuracy (without missing values)',
+                       'Average Number of Samples Classified using Unkown Value',
 
-                       'Average Number of Samples with Unkown Values for Accepted Attribute',
                        'Average Number of Nodes Pruned']
 
         print(OUTPUT_SPLIT_CHAR.join(FIELDS_LIST), file=FOUT)
@@ -440,8 +337,12 @@ if __name__ == '__main__':
 
     USE_RANDOM = [False, True]
     MAX_P_VALUE_CHI_SQ = [0.1]
+    MIN_NUM_SAMPLES_ALLOWED = [1]
+    MAX_DEPTH = [5]
 
-    for curr_num_samples in NUM_SAMPLES:
+    for (curr_num_samples,
+         curr_min_num_samples_allowed,
+         curr_max_depth) in itertools.product(NUM_SAMPLES, MIN_NUM_SAMPLES_ALLOWED, MAX_DEPTH):
         # Run without any bias treatment
         main(DATASET_NAMES,
              DATASETS_FILEPATHS,
@@ -450,6 +351,8 @@ if __name__ == '__main__':
              SPLIT_CHARS,
              MISSING_VALUE_STRINGS,
              curr_num_samples,
+             curr_min_num_samples_allowed,
+             curr_max_depth,
              NUM_TRIALS,
              use_chi_sq_test=False,
              max_p_value_chi_sq=None,
@@ -468,6 +371,8 @@ if __name__ == '__main__':
                  SPLIT_CHARS,
                  MISSING_VALUE_STRINGS,
                  curr_num_samples,
+                 curr_min_num_samples_allowed,
+                 curr_max_depth,
                  NUM_TRIALS,
                  use_chi_sq_test=True,
                  max_p_value_chi_sq=curr_max_p_value_chi_sq,
@@ -489,6 +394,8 @@ if __name__ == '__main__':
                  SPLIT_CHARS,
                  MISSING_VALUE_STRINGS,
                  curr_num_samples,
+                 curr_min_num_samples_allowed,
+                 curr_max_depth,
                  NUM_TRIALS,
                  use_chi_sq_test=False,
                  max_p_value_chi_sq=None,

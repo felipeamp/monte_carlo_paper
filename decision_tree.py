@@ -181,6 +181,10 @@ class DecisionTree(object):
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
             calculate_expected_tests (bool, optional): indicates wether we should calculate the
                 expected number of tests done by our monte carlo framework. Defaults to `False`.
+        Returns:
+            tuple containing, in order:
+                - time_taken_prunning (float): time spent prunning the trained tree.
+                - nodes_prunned (int): number of nodes prunned.
         """
         self._dataset = dataset
         print('Starting tree training...')
@@ -198,8 +202,11 @@ class DecisionTree(object):
                                    calculate_expected_tests=calculate_expected_tests)
         self._root_node.create_subtree(self._criterion)
         print('Starting prunning trivial subtrees...')
-        self._root_node.prune_trivial_subtrees()
+        start_time = timeit.default_timer()
+        num_nodes_prunned = self._root_node.prune_trivial_subtrees()
+        time_taken_prunning = timeit.default_timer() - start_time
         print('Done!')
+        return time_taken_prunning, num_nodes_prunned
 
     def train_and_test(self, dataset, training_samples_indices, validation_sample_indices,
                        max_depth, min_samples_per_node, use_stop_conditions=False,
@@ -236,8 +243,9 @@ class DecisionTree(object):
                 expected number of tests done by our monte carlo framework. Defaults to `False`.
 
         Returns:
-            A tuple containing the tree's max depth in the second entry and, in the first entry,
-                another tuple. This (first) tuple contains, in order:
+            A tuple containing the tree's max depth in the second entry, the time taken prunning
+            in the third entry and the number of nodes prunned in the fourth entry. In the first
+            entry it returns another tuple containing, in order:
                 - a list of predicted class for each validation sample;
                 - the number of correct classifications;
                 - the number of correct classifications done without validation samples with unkown
@@ -254,20 +262,22 @@ class DecisionTree(object):
                 - list where the i-th entry has the attribute index used for classification of the
                     i-th sample when an unkown value occurred.
         """
-        self.train(dataset,
-                   training_samples_indices,
-                   max_depth,
-                   min_samples_per_node,
-                   use_stop_conditions,
-                   max_p_value_chi_sq,
-                   calculate_expected_tests)
+        time_taken_prunning, num_nodes_prunned = self.train(dataset,
+                                                            training_samples_indices,
+                                                            max_depth,
+                                                            min_samples_per_node,
+                                                            use_stop_conditions,
+                                                            max_p_value_chi_sq,
+                                                            calculate_expected_tests)
         max_depth = self.get_root_node().get_max_depth()
         return (self._classify_samples(self._dataset.samples,
                                        self._dataset.sample_class,
                                        self._dataset.sample_costs,
                                        validation_sample_indices,
                                        self._dataset.sample_index_to_key),
-                max_depth)
+                max_depth,
+                time_taken_prunning,
+                num_nodes_prunned)
 
     def cross_validate(self, dataset, num_folds, max_depth, min_samples_per_node,
                        is_stratified=True, print_tree=False, seed=None, print_samples=False,
@@ -325,7 +335,9 @@ class DecisionTree(object):
                 - list where the i-th entry has the attribute index used for classification of the
                     i-th sample when an unkown value occurred;
                 - list containing the nodes information (see TreeNode.get_nodes_infos()) for each
-                    fold.
+                    fold;
+                - list containing the time spent prunning in each fold;
+                - list containing the number of nodes prunned in each fold;
                 - list containing the maximum tree depth for each fold.
         """
 
@@ -342,6 +354,9 @@ class DecisionTree(object):
         fold_count = 0
 
         nodes_infos_per_fold = []
+
+        time_taken_prunning_per_fold = []
+        num_nodes_prunned_per_fold = []
 
         sample_indices_and_classes = list(enumerate(dataset.sample_class))
         if seed is not None:
@@ -374,13 +389,15 @@ class DecisionTree(object):
                   curr_classified_with_unkown_value_array,
                   curr_num_unkown,
                   curr_unkown_value_attrib_index_array),
-                 curr_max_depth) = self.train_and_test(dataset,
-                                                       training_samples_indices,
-                                                       validation_sample_indices,
-                                                       max_depth,
-                                                       min_samples_per_node,
-                                                       use_stop_conditions,
-                                                       max_p_value_chi_sq)
+                 curr_max_depth,
+                 curr_time_taken_prunning,
+                 curr_num_nodes_prunned) = self.train_and_test(dataset,
+                                                               training_samples_indices,
+                                                               validation_sample_indices,
+                                                               max_depth,
+                                                               min_samples_per_node,
+                                                               use_stop_conditions,
+                                                               max_p_value_chi_sq)
 
                 max_depth_per_fold.append(curr_max_depth)
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
@@ -397,6 +414,8 @@ class DecisionTree(object):
 
                 fold_count += 1
                 nodes_infos_per_fold.append(self._root_node.get_nodes_infos())
+                time_taken_prunning_per_fold.append(curr_time_taken_prunning)
+                num_nodes_prunned_per_fold.append(curr_num_nodes_prunned)
 
                 if print_tree:
                     print()
@@ -416,13 +435,15 @@ class DecisionTree(object):
                   curr_classified_with_unkown_value_array,
                   curr_num_unkown,
                   curr_unkown_value_attrib_index_array),
-                 curr_max_depth) = self.train_and_test(dataset,
-                                                       training_samples_indices,
-                                                       validation_sample_indices,
-                                                       max_depth,
-                                                       min_samples_per_node,
-                                                       use_stop_conditions,
-                                                       max_p_value_chi_sq)
+                 curr_max_depth,
+                 curr_time_taken_prunning,
+                 curr_num_nodes_prunned) = self.train_and_test(dataset,
+                                                               training_samples_indices,
+                                                               validation_sample_indices,
+                                                               max_depth,
+                                                               min_samples_per_node,
+                                                               use_stop_conditions,
+                                                               max_p_value_chi_sq)
 
                 max_depth_per_fold.append(curr_max_depth)
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
@@ -439,6 +460,8 @@ class DecisionTree(object):
 
                 fold_count += 1
                 nodes_infos_per_fold.append(self._root_node.get_nodes_infos())
+                time_taken_prunning_per_fold.append(curr_time_taken_prunning)
+                num_nodes_prunned_per_fold.append(curr_num_nodes_prunned)
 
                 if print_tree:
                     print()
@@ -455,6 +478,8 @@ class DecisionTree(object):
                  num_unkown,
                  unkown_value_attrib_index_array,
                  nodes_infos_per_fold,
+                 time_taken_prunning_per_fold,
+                 num_nodes_prunned_per_fold,
                  max_depth_per_fold)
 
     def test(self, test_sample_indices):
@@ -887,14 +912,16 @@ class TreeNode(object):
                 num_valid_nominal_attributes)
             self.time_num_tests_fails = timeit.default_timer() - start_time
 
-        if self.calculate_expected_tests:
-            start_time = timeit.default_timer()
-            num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
-            self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
-                num_tests,
-                num_fails_allowed,
-                num_valid_nominal_attributes)
-            self.time_expected_tests = timeit.default_timer() - start_time
+            if self.calculate_expected_tests:
+                start_time = timeit.default_timer()
+                num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
+                self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
+                    self.num_tests,
+                    self.num_fails_allowed,
+                    num_valid_nominal_attributes)
+                self.time_expected_tests = timeit.default_timer() - start_time
+            else:
+                self.total_expected_num_tests = 0.0
         else:
             self.total_expected_num_tests = 0.0
 
@@ -988,23 +1015,26 @@ class TreeNode(object):
         return sum(subtree.get_subtree_time_expected_tests() for subtree in self.nodes)
 
     def prune_trivial_subtrees(self):
-        """Applies prunning to an already trained tree.
+        """Applies prunning to an already trained tree. Returns the number of prunned nodes.
 
         If a TreeNode is trivial, that is, every leaf in its subtree has the same
         `most_common_int_class`, then the current TreeNode becomes a leaf with this class, deleting
         every child node in this process. It is applied recursively.
         """
+        num_prunned = 0
         if not self.is_leaf:
             children_classes = set()
             num_trivial_children = 0
             for child_node in self.nodes:
-                child_node.prune_trivial_subtrees()
+                num_prunned += child_node.prune_trivial_subtrees()
                 if child_node.is_leaf:
                     num_trivial_children += 1
                     children_classes.add(child_node.most_common_int_class)
             if num_trivial_children == len(self.nodes) and len(children_classes) == 1:
                 self.is_leaf = True
+                num_prunned += num_trivial_children
                 self.nodes = []
+        return num_prunned
 
     def get_nodes_infos(self, max_depth=3):
         """Get information about nodes in the tree, up to `max_depth`.

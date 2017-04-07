@@ -49,6 +49,7 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
     e_list = []
     e_over_m_list = []
 
+    num_times_accepted = 0
     accepted_position_list = []
 
     total_time_taken_list = []
@@ -110,12 +111,13 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
         num_fails_allowed_list.append(root_node.num_fails_allowed)
         theoretical_e_over_m_list.append(
             root_node.total_expected_num_tests / num_valid_attributes_list[-1])
-        e_list.append(root_node.node_split.total_num_tests_needed)
-        e_over_m_list.append(
-            root_node.node_split.total_num_tests_needed / num_valid_attributes_list[-1])
 
-        accepted_position_list.append(root_node.node_split.accepted_position)
-        num_nodes_pruned_list.append(num_nodes_prunned)
+        if root_node.node_split is not None:
+            num_times_accepted += 1
+            e_list.append(root_node.node_split.total_num_tests_needed)
+            e_over_m_list.append(
+                root_node.node_split.total_num_tests_needed / num_valid_attributes_list[-1])
+            accepted_position_list.append(root_node.node_split.accepted_position)
 
         total_time_taken_list.append(total_time_taken)
         time_taken_prunning_list.append(time_taken_prunning)
@@ -125,6 +127,8 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
                                 - time_taken_prunning_list[-1]
                                 - time_taken_num_tests_fails_list[-1]
                                 - time_taken_expected_tests_list[-1])
+
+        num_nodes_pruned_list.append(num_nodes_prunned)
 
         # Time to test this tree's classification and save the classification information
         (_,
@@ -148,8 +152,9 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
                    np.array(num_tests_list), np.array(num_fails_allowed_list),
                    np.array(num_valid_attributes_list), np.array(theoretical_e_over_m_list),
                    np.array(e_list), np.array(e_over_m_list), np.array(accepted_position_list),
-                   np.array(total_time_taken_list), np.array(time_taken_tree_list),
-                   np.array(time_taken_prunning_list), np.array(time_taken_num_tests_fails_list),
+                   num_times_accepted, np.array(total_time_taken_list),
+                   np.array(time_taken_tree_list), np.array(time_taken_prunning_list),
+                   np.array(time_taken_num_tests_fails_list),
                    np.array(time_taken_expected_tests_list),
                    np.array(accuracy_with_missing_values_list),
                    np.array(accuracy_without_missing_values_list),
@@ -161,8 +166,8 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_ch
                    max_p_value_chi_sq, use_monte_carlo, is_random_ordering, upper_p_value_threshold,
                    lower_p_value_threshold, prob_monte_carlo, num_tests_array,
                    num_fails_allowed_array, num_valid_attributes_array, theoretical_e_over_m_array,
-                   e_array, e_over_m_array, accepted_position_array, total_time_taken_array,
-                   time_taken_tree_array, time_taken_prunning_array,
+                   e_array, e_over_m_array, accepted_position_array, num_times_accepted,
+                   total_time_taken_array, time_taken_tree_array, time_taken_prunning_array,
                    time_taken_num_tests_fails_array, time_taken_expected_tests_array,
                    accuracy_with_missing_values_array, accuracy_without_missing_values_array,
                    num_samples_missing_values_array, num_nodes_pruned_array, output_split_char,
@@ -211,6 +216,7 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_ch
                  str(np.amin(e_over_m_array)),
                  str(np.std(e_over_m_array)),
 
+                 str(num_times_accepted),
                  str(np.mean(accepted_position_array)),
                  str(np.amax(accepted_position_array)),
                  str(np.amin(accepted_position_array)),
@@ -399,7 +405,7 @@ if __name__ == '__main__':
                        'Minimum Number of Tests Needed per Attribute (E/m)',
                        'Standard Deviation of Number of Tests Needed per Attribute (sd(E/m))',
 
-                       'Number of experiments with accepted attributes',
+                       'Number of Experiments with Accepted Attributes',
                        'Average Position of Accepted Attribute',
                        'Min Position of Accepted Attribute',
                        'Max Position of Accepted Attribute',

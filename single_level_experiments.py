@@ -180,6 +180,7 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_ch
                  str(num_samples),
                  str(num_trials),
                  criterion_name,
+                 MIN_NUM_SAMPLES_ALLOWED,
 
                  str(use_chi_sq_test),
                  str(max_p_value_chi_sq),
@@ -368,6 +369,7 @@ if __name__ == '__main__':
                        'Number of Samples',
                        'Number of Trials',
                        'Criterion',
+                       'Number of Samples Forcing a Leaf',
 
                        'Uses Chi-Square Test',
                        'Maximum p-value Allowed by Chi-Square Test',

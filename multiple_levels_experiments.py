@@ -116,9 +116,9 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, min_nu
                  str(num_samples),
                  str(num_trials),
                  criterion_name,
-                 min_num_samples_allowed,
-                 max_depth,
-                 NUM_FOLDS,
+                 str(min_num_samples_allowed),
+                 str(max_depth),
+                 str(NUM_FOLDS),
 
                  str(use_chi_sq_test),
                  str(max_p_value_chi_sq),

@@ -1148,6 +1148,8 @@ class NodeSplit(object):
         self.splits_values = splits_values
         self.values_to_split = values_to_split
         self.criterion_value = criterion_value
+
         self.total_num_tests_needed = total_num_tests_needed
         self.accepted_position = accepted_position
+
         self.mid_point = mid_point

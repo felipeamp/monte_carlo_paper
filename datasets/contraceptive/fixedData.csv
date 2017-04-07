@@ -1,4 +1,4 @@
-Wife_age,,,,,,,,,
+Wife_age,wife_educ,husband_educ,num_of_child,wife_relig,wife_works,husband-occup,std_of_living,media_exposure,contraceptive_method_used
 24,avg-low,avg-high,three,Islam,No,two,avg-high,Good,Long-term
 45,low,avg-high,ten,Islam,No,three,high,Good,Long-term
 43,avg-low,avg-high,seven,Islam,No,three,high,Good,Long-term

@@ -16,6 +16,8 @@ from scipy.stats import chi2
 import monte_carlo
 
 
+#: Minimum number of samples in the two largest entries of a contingency table so that the attribute
+#: is considered valid.
 MIN_ALLOWED_IN_TWO_LARGEST = 40
 
 
@@ -153,8 +155,9 @@ class DecisionTree(object):
                 unkown_value_attrib_index_array)
 
     def train(self, dataset, training_samples_indices, max_depth, min_samples_per_node,
-              use_stop_conditions=False, max_p_value_chi_sq=0.1):
-        """Trains the tree in a recursive fashion, starting at the root's TreeNode.
+              use_stop_conditions=False, max_p_value_chi_sq=0.1, calculate_expected_tests=False):
+        """Trains the tree in a recursive fashion, starting at the root's TreeNode. Afterwards,
+        prunes the trivial subtrees.
 
         Args:
             dataset (Dataset): dataset containing the samples used for training.
@@ -176,6 +179,12 @@ class DecisionTree(object):
             max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
                 be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
+            calculate_expected_tests (bool, optional): indicates wether we should calculate the
+                expected number of tests done by our monte carlo framework. Defaults to `False`.
+        Returns:
+            tuple containing, in order:
+                - time_taken_prunning (float): time spent prunning the trained tree.
+                - nodes_prunned (int): number of nodes prunned.
         """
         self._dataset = dataset
         print('Starting tree training...')
@@ -189,15 +198,19 @@ class DecisionTree(object):
                                    is_monte_carlo_criterion=self._is_monte_carlo_criterion,
                                    upper_p_value_threshold=self._upper_p_value_threshold,
                                    lower_p_value_threshold=self._lower_p_value_threshold,
-                                   prob_monte_carlo=self._prob_monte_carlo)
+                                   prob_monte_carlo=self._prob_monte_carlo,
+                                   calculate_expected_tests=calculate_expected_tests)
         self._root_node.create_subtree(self._criterion)
         print('Starting prunning trivial subtrees...')
-        self._root_node.prune_trivial_subtrees()
+        start_time = timeit.default_timer()
+        num_nodes_prunned = self._root_node.prune_trivial_subtrees()
+        time_taken_prunning = timeit.default_timer() - start_time
         print('Done!')
+        return time_taken_prunning, num_nodes_prunned
 
     def train_and_test(self, dataset, training_samples_indices, validation_sample_indices,
                        max_depth, min_samples_per_node, use_stop_conditions=False,
-                       max_p_value_chi_sq=0.1):
+                       max_p_value_chi_sq=0.1, calculate_expected_tests=False):
         """Trains a tree with part of the dataset (training samples) and tests the tree
         classification in another part (validation samples).
 
@@ -226,10 +239,13 @@ class DecisionTree(object):
             max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
                 be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
+            calculate_expected_tests (bool, optional): indicates wether we should calculate the
+                expected number of tests done by our monte carlo framework. Defaults to `False`.
 
         Returns:
-            A tuple containing the tree's max depth in the second entry and, in the first entry,
-                another tuple. This (first) tuple contains, in order:
+            A tuple containing the tree's max depth in the second entry, the time taken prunning
+            in the third entry and the number of nodes prunned in the fourth entry. In the first
+            entry it returns another tuple containing, in order:
                 - a list of predicted class for each validation sample;
                 - the number of correct classifications;
                 - the number of correct classifications done without validation samples with unkown
@@ -246,19 +262,22 @@ class DecisionTree(object):
                 - list where the i-th entry has the attribute index used for classification of the
                     i-th sample when an unkown value occurred.
         """
-        self.train(dataset,
-                   training_samples_indices,
-                   max_depth,
-                   min_samples_per_node,
-                   use_stop_conditions,
-                   max_p_value_chi_sq)
+        time_taken_prunning, num_nodes_prunned = self.train(dataset,
+                                                            training_samples_indices,
+                                                            max_depth,
+                                                            min_samples_per_node,
+                                                            use_stop_conditions,
+                                                            max_p_value_chi_sq,
+                                                            calculate_expected_tests)
         max_depth = self.get_root_node().get_max_depth()
         return (self._classify_samples(self._dataset.samples,
                                        self._dataset.sample_class,
                                        self._dataset.sample_costs,
                                        validation_sample_indices,
                                        self._dataset.sample_index_to_key),
-                max_depth)
+                max_depth,
+                time_taken_prunning,
+                num_nodes_prunned)
 
     def cross_validate(self, dataset, num_folds, max_depth, min_samples_per_node,
                        is_stratified=True, print_tree=False, seed=None, print_samples=False,
@@ -316,8 +335,12 @@ class DecisionTree(object):
                 - list where the i-th entry has the attribute index used for classification of the
                     i-th sample when an unkown value occurred;
                 - list containing the nodes information (see TreeNode.get_nodes_infos()) for each
-                    fold.
-                - list containing the maximum tree depth for each fold.
+                    fold;
+                - list containing the time spent prunning in each fold;
+                - list containing the number of nodes prunned in each fold;
+                - list containing the maximum tree depth for each fold;
+                - list containing the number of nodes per fold, after prunning;
+                - list containing the number of valid attributes in root node in each fold.
         """
 
         classifications = [0] * dataset.num_samples
@@ -329,10 +352,15 @@ class DecisionTree(object):
         num_unkown = 0
         unkown_value_attrib_index_array = [0] * dataset.num_samples
         max_depth_per_fold = []
+        num_nodes_per_fold = []
+        num_valid_attributes_in_root = []
 
         fold_count = 0
 
         nodes_infos_per_fold = []
+
+        time_taken_prunning_per_fold = []
+        num_nodes_prunned_per_fold = []
 
         sample_indices_and_classes = list(enumerate(dataset.sample_class))
         if seed is not None:
@@ -365,15 +393,20 @@ class DecisionTree(object):
                   curr_classified_with_unkown_value_array,
                   curr_num_unkown,
                   curr_unkown_value_attrib_index_array),
-                 curr_max_depth) = self.train_and_test(dataset,
-                                                       training_samples_indices,
-                                                       validation_sample_indices,
-                                                       max_depth,
-                                                       min_samples_per_node,
-                                                       use_stop_conditions,
-                                                       max_p_value_chi_sq)
+                 curr_max_depth,
+                 curr_time_taken_prunning,
+                 curr_num_nodes_prunned) = self.train_and_test(dataset,
+                                                               training_samples_indices,
+                                                               validation_sample_indices,
+                                                               max_depth,
+                                                               min_samples_per_node,
+                                                               use_stop_conditions,
+                                                               max_p_value_chi_sq)
 
                 max_depth_per_fold.append(curr_max_depth)
+                num_nodes_per_fold.append(self.get_root_node().get_num_nodes())
+                num_valid_attributes_in_root.append(
+                    sum(self._root_node.valid_nominal_attribute))
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
                     classifications[validation_sample_index] = curr_classifications[curr_index]
                     classified_with_unkown_value_array[validation_sample_index] = (
@@ -388,6 +421,8 @@ class DecisionTree(object):
 
                 fold_count += 1
                 nodes_infos_per_fold.append(self._root_node.get_nodes_infos())
+                time_taken_prunning_per_fold.append(curr_time_taken_prunning)
+                num_nodes_prunned_per_fold.append(curr_num_nodes_prunned)
 
                 if print_tree:
                     print()
@@ -407,15 +442,20 @@ class DecisionTree(object):
                   curr_classified_with_unkown_value_array,
                   curr_num_unkown,
                   curr_unkown_value_attrib_index_array),
-                 curr_max_depth) = self.train_and_test(dataset,
-                                                       training_samples_indices,
-                                                       validation_sample_indices,
-                                                       max_depth,
-                                                       min_samples_per_node,
-                                                       use_stop_conditions,
-                                                       max_p_value_chi_sq)
+                 curr_max_depth,
+                 curr_time_taken_prunning,
+                 curr_num_nodes_prunned) = self.train_and_test(dataset,
+                                                               training_samples_indices,
+                                                               validation_sample_indices,
+                                                               max_depth,
+                                                               min_samples_per_node,
+                                                               use_stop_conditions,
+                                                               max_p_value_chi_sq)
 
                 max_depth_per_fold.append(curr_max_depth)
+                num_nodes_per_fold.append(self.get_root_node().get_num_nodes())
+                num_valid_attributes_in_root.append(
+                    sum(self._root_node.valid_nominal_attribute))
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
                     classifications[validation_sample_index] = curr_classifications[curr_index]
                     classified_with_unkown_value_array[validation_sample_index] = (
@@ -430,6 +470,8 @@ class DecisionTree(object):
 
                 fold_count += 1
                 nodes_infos_per_fold.append(self._root_node.get_nodes_infos())
+                time_taken_prunning_per_fold.append(curr_time_taken_prunning)
+                num_nodes_prunned_per_fold.append(curr_num_nodes_prunned)
 
                 if print_tree:
                     print()
@@ -446,7 +488,11 @@ class DecisionTree(object):
                  num_unkown,
                  unkown_value_attrib_index_array,
                  nodes_infos_per_fold,
-                 max_depth_per_fold)
+                 time_taken_prunning_per_fold,
+                 num_nodes_prunned_per_fold,
+                 max_depth_per_fold,
+                 num_nodes_per_fold,
+                 num_valid_attributes_in_root)
 
     def test(self, test_sample_indices):
         """Tests the (already trained) tree over samples from the same dataset as the
@@ -634,7 +680,7 @@ class TreeNode(object):
         total_expected_num_tests (float): total number of expected tests to be done at this node, in
             the worst-case p-value distribution.
         time_num_tests_fails (float): time taken to calculate the value of
-            `total_expected_num_tests`, in seconds.
+            `num_tests` and `num_fails_allowed`, in seconds.
         time_expected_tests (float): time taken to calculate the value of
             `total_expected_num_tests`, in seconds.
     """
@@ -693,6 +739,8 @@ class TreeNode(object):
         self.lower_p_value_threshold = lower_p_value_threshold
         self.prob_monte_carlo = prob_monte_carlo
 
+        self.num_tests = 0
+        self.num_fails_allowed = 0
         self.total_expected_num_tests = 0
         self.time_num_tests_fails = 0.0
         self.time_expected_tests = 0.0
@@ -701,7 +749,6 @@ class TreeNode(object):
         self._min_samples_per_node = min_samples_per_node
 
         self.is_leaf = True
-        self._is_trivial = None
         self.node_split = None
         self.nodes = []
         self.contingency_tables = None
@@ -870,33 +917,34 @@ class TreeNode(object):
         if self.is_monte_carlo_criterion:
             start_time = timeit.default_timer()
             num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
-            (num_tests, num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
+            (self.num_tests, self.num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
                 self.upper_p_value_threshold,
                 self.lower_p_value_threshold,
                 self.prob_monte_carlo,
                 num_valid_nominal_attributes)
             self.time_num_tests_fails = timeit.default_timer() - start_time
-        else:
-            num_tests = 0
-            num_fails_allowed = 0
 
-        if self.calculate_expected_tests:
-            start_time = timeit.default_timer()
-            num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
-            self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
-                num_tests,
-                num_fails_allowed,
-                num_valid_nominal_attributes)
-            self.time_expected_tests = timeit.default_timer() - start_time
+            if self.calculate_expected_tests:
+                start_time = timeit.default_timer()
+                num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
+                self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
+                    self.num_tests,
+                    self.num_fails_allowed,
+                    num_valid_nominal_attributes)
+                self.time_expected_tests = timeit.default_timer() - start_time
+            else:
+                self.total_expected_num_tests = 0.0
         else:
             self.total_expected_num_tests = 0.0
 
         # Get best split. Note that self is the current TreeNode.
         (separation_attrib_index,
          splits_values,
-         criterion_value) = criterion.select_best_attribute_and_split(self,
-                                                                      num_tests,
-                                                                      num_fails_allowed)
+         criterion_value,
+         total_num_tests_needed,
+         accepted_position) = criterion.select_best_attribute_and_split(self,
+                                                                        self.num_tests,
+                                                                        self.num_fails_allowed)
 
         if math.isinf(criterion_value):
             # Stop condition for Max Cut tree: above p_value or no valid attribute index with more
@@ -918,7 +966,9 @@ class TreeNode(object):
                                         None,
                                         None,
                                         criterion_value,
-                                        mid_point)
+                                        total_num_tests_needed=0,
+                                        accepted_position=1,
+                                        mid_point=mid_point)
 
         else:
             # NOMINAL ATTRIBUTE
@@ -936,7 +986,9 @@ class TreeNode(object):
             self.node_split = NodeSplit(separation_attrib_index,
                                         splits_values,
                                         values_to_split,
-                                        criterion_value)
+                                        criterion_value,
+                                        total_num_tests_needed,
+                                        accepted_position)
 
         # Create subtrees
         self.is_leaf = False
@@ -975,23 +1027,26 @@ class TreeNode(object):
         return sum(subtree.get_subtree_time_expected_tests() for subtree in self.nodes)
 
     def prune_trivial_subtrees(self):
-        """Applies prunning to an already trained tree.
+        """Applies prunning to an already trained tree. Returns the number of prunned nodes.
 
         If a TreeNode is trivial, that is, every leaf in its subtree has the same
         `most_common_int_class`, then the current TreeNode becomes a leaf with this class, deleting
-        every child node in this process. Is applied recursively.
+        every child node in this process. It is applied recursively.
         """
+        num_prunned = 0
         if not self.is_leaf:
             children_classes = set()
             num_trivial_children = 0
             for child_node in self.nodes:
-                child_node.prune_trivial_subtrees()
+                num_prunned += child_node.prune_trivial_subtrees()
                 if child_node.is_leaf:
                     num_trivial_children += 1
                     children_classes.add(child_node.most_common_int_class)
             if num_trivial_children == len(self.nodes) and len(children_classes) == 1:
                 self.is_leaf = True
+                num_prunned += num_trivial_children
                 self.nodes = []
+        return num_prunned
 
     def get_nodes_infos(self, max_depth=3):
         """Get information about nodes in the tree, up to `max_depth`.
@@ -1076,9 +1131,13 @@ class NodeSplit(object):
         criterion_value (float): criterion value for this split.
         mid_point (float): cut point for numeric splits. Will be the average between the largest
             value on the left split and the smallest value on the right split.
+        total_num_tests_needed (int): Number of tests needed before the Monte Carlo framework
+            accepted an attribute.
+        accepted_position (int): Position of the attribute accepted by the Monte Carlo Framework.
+            Starts counting at `1`.
     """
     def __init__(self, separation_attrib_index, splits_values, values_to_split, criterion_value,
-                 mid_point=None):
+                 total_num_tests_needed, accepted_position, mid_point=None):
         """Initializes a TreeNode instance with the given arguments.
 
         Args:
@@ -1089,6 +1148,10 @@ class NodeSplit(object):
             values_to_split (:obj:'dict' of 'int'): reversed index for `splits_values`. Given a
                 value, it returns the index of the split that this value belongs to.
             criterion_value (float): optimal criterion value obtained for this TreeNode.
+            total_num_tests_needed (int): Number of tests needed before the Monte Carlo framework
+                accepted an attribute.
+            accepted_position (int): Position of the attribute accepted by the Monte Carlo
+                Framework. Starts counting at `1`.
             mid_point (float, optional): cut point for numeric splits. Will be the average between
                 the largest value on the left split and the smallest value on the right split. Not
                 used for splits that use nominal attributes. Defaults to `None`.
@@ -1097,4 +1160,8 @@ class NodeSplit(object):
         self.splits_values = splits_values
         self.values_to_split = values_to_split
         self.criterion_value = criterion_value
+
+        self.total_num_tests_needed = total_num_tests_needed
+        self.accepted_position = accepted_position
+
         self.mid_point = mid_point

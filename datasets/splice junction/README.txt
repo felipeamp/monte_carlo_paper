@@ -102,8 +102,8 @@
    ============  ============
              1   One of {n ei ie}, indicating the class.
              2   The instance name.
-          3-62   The remaining 60 fields are the sequence, starting at 
-                 position -30 and ending at position +30. Each of
+          3-62   The remaining 60 fields (s1, s2, ..., s60) are the sequence,
+                 starting at position -30 and ending at position +30. Each of
                  these fields is almost always filled by one of 
                  {a, g, t, c}. Other characters indicate ambiguity among
                  the standard characters according to the following table:

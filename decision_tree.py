@@ -789,6 +789,12 @@ class TreeNode(object):
             self.contingency_tables.append((curr_contingency_table, curr_values_num_samples))
 
     def _is_attribute_valid(self, attrib_index, min_allowed_in_two_largest):
+        """Returns a pair of booleans indicating:
+            - wether the current attribute has more than `min_allowed_in_two_largest` samples in
+                second largest class;
+            - wether the condition above is `True` AND its chi-square test's p-value is smaller than
+                `self._max_p_value_chi_sq`.
+        """
         def _get_chi_square_test_p_value(contingency_table, values_num_samples):
             classes_seen = set()
             for value in range(contingency_table.shape[0]):
@@ -824,11 +830,11 @@ class TreeNode(object):
             elif num_samples > second_largest:
                 second_largest = num_samples
         if second_largest < min_allowed_in_two_largest:
-            return False
+            return (False, False)
         chi_square_test_p_value = _get_chi_square_test_p_value(
             self.contingency_tables[attrib_index][0],
             self.contingency_tables[attrib_index][1])
-        return chi_square_test_p_value < self._max_p_value_chi_sq
+        return (True, chi_square_test_p_value < self._max_p_value_chi_sq)
 
     def create_subtree(self, criterion):
         """Given the splitting criterion, creates a tree rooted at the current TreeNode.
@@ -892,17 +898,26 @@ class TreeNode(object):
 
         if self._use_stop_conditions:
             num_valid_attributes = sum(self.dataset.valid_numeric_attribute)
+            # Attributes which are valid (`True`) in `new_valid_nominal_attribute` and invalid
+            # (`False`) in `new_valid_nominal_attribute_incl_chi_sq_test` should not be used to
+            # split at this node, but could be used to split in descendant nodes.
             new_valid_nominal_attribute = self.valid_nominal_attribute[:]
+            new_valid_nominal_attribute_incl_chi_sq_test = self.valid_nominal_attribute[:]
             for (attrib_index,
                  is_valid_nominal_attribute) in enumerate(self.valid_nominal_attribute):
                 if is_valid_nominal_attribute:
-                    if (self._is_attribute_valid(
-                            attrib_index,
-                            min_allowed_in_two_largest=MIN_ALLOWED_IN_TWO_LARGEST)):
+                    (is_valid_num_samples,
+                     is_valid_chi_sq) = (self._is_attribute_valid(
+                         attrib_index,
+                         min_allowed_in_two_largest=MIN_ALLOWED_IN_TWO_LARGEST))
+                    if is_valid_chi_sq:
                         num_valid_attributes += 1
+                    elif is_valid_num_samples:
+                        new_valid_nominal_attribute_incl_chi_sq_test[attrib_index] = False
                     else:
                         new_valid_nominal_attribute[attrib_index] = False
-            self.valid_nominal_attribute = new_valid_nominal_attribute
+                        new_valid_nominal_attribute_incl_chi_sq_test[attrib_index] = False
+            self.valid_nominal_attribute = new_valid_nominal_attribute_incl_chi_sq_test
             if num_valid_attributes == 0:
                 return None
 
@@ -984,6 +999,10 @@ class TreeNode(object):
 
         # Create subtrees
         self.is_leaf = False
+        if self._use_stop_conditions:
+            # Any attribute that has enough samples in the second largest could pass the chi-square
+            # test in a descendant node.
+            self.valid_nominal_attribute = new_valid_nominal_attribute
         for curr_split_samples_indices in splits_samples_indices:
             self.nodes.append(TreeNode(self.dataset,
                                        curr_split_samples_indices,

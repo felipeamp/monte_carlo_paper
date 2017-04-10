@@ -360,6 +360,16 @@ if __name__ == '__main__':
     SPLIT_CHARS.append(',')
     MISSING_VALUE_STRINGS.append(None)
 
+    # Poker Hand:
+    DATASET_NAMES.append('Poker Hand')
+    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+                                           'poker hand',
+                                           'poker-hand-modified.csv'))
+    KEY_ATTRIB_INDICES.append(None)
+    CLASS_ATTRIB_INDICES.append(-1)
+    SPLIT_CHARS.append(',')
+    MISSING_VALUE_STRINGS.append(None)
+
     # Titanic Survive:
     DATASET_NAMES.append('Titanic Survive')
     DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,

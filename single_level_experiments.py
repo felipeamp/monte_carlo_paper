@@ -32,13 +32,13 @@ NUM_TRIALS = 5
 MAX_RANDOM_TRIES = 10
 
 
-def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, num_trials,
+def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_training_samples, num_trials,
                            use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
                            upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo,
                            output_file_descriptor, output_split_char, seed=RANDOM_SEED):
-    """Runs `num_trials` experiments, each one randomly selecting `num_samples` valid samples to use
-    for training and testing the tree in the rest of the dataset. Saves the training and
-    classification information in the `output_file_descriptor` file.
+    """Runs `num_trials` experiments, each one randomly selecting `num_training_samples` valid
+    samples to use for training and testing the tree in the rest of the dataset. Saves the training
+    and classification information in the `output_file_descriptor` file.
     """
     if seed is not None:
         random.seed(seed)
@@ -75,8 +75,8 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
         print()
 
         random.shuffle(training_samples_indices)
-        curr_training_samples_indices = training_samples_indices[:num_samples]
-        curr_test_samples_indices = training_samples_indices[num_samples:]
+        curr_training_samples_indices = training_samples_indices[:num_training_samples]
+        curr_test_samples_indices = training_samples_indices[num_training_samples:]
 
         tree = decision_tree.DecisionTree(criterion=criterion,
                                           is_monte_carlo_criterion=use_monte_carlo,
@@ -106,8 +106,9 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
                 print('Will skip to the next test.')
                 return None
             random.shuffle(training_samples_indices)
-            curr_training_samples_indices = training_samples_indices[:num_samples]
-            curr_test_samples_indices = training_samples_indices[num_samples: 2 * num_samples]
+            curr_training_samples_indices = training_samples_indices[:num_training_samples]
+            curr_test_samples_indices = training_samples_indices[
+                num_training_samples: 2 * num_training_samples]
 
             start_time = timeit.default_timer()
             (time_taken_prunning,
@@ -158,15 +159,20 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
          _) = tree.test(curr_test_samples_indices)
 
         accuracy_with_missing_values_list.append(
-            num_correct_classifications_w_unkown / len(curr_test_samples_indices))
-        accuracy_without_missing_values_list.append(
-            num_correct_classifications_wo_unkown / len(curr_test_samples_indices))
+            100.0 * num_correct_classifications_w_unkown
+            / len(curr_test_samples_indices))
+        try:
+            accuracy_without_missing_values_list.append(
+                100.0 * num_correct_classifications_wo_unkown
+                / (len(curr_test_samples_indices) - num_unkown))
+        except ZeroDivisionError:
+            pass
         num_samples_missing_values_list.append(num_unkown)
 
-    save_fold_info(dataset_name, num_samples, num_trials, criterion.name, use_chi_sq_test,
-                   max_p_value_chi_sq, use_monte_carlo, criteria.ORDER_RANDOMLY,
-                   upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo,
-                   np.array(num_tests_list), np.array(num_fails_allowed_list),
+    save_fold_info(dataset_name, train_dataset.num_samples, num_training_samples, num_trials,
+                   criterion.name, use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
+                   criteria.ORDER_RANDOMLY, upper_p_value_threshold, lower_p_value_threshold,
+                   prob_monte_carlo, np.array(num_tests_list), np.array(num_fails_allowed_list),
                    np.array(num_valid_attributes_list), np.array(theoretical_e_over_m_list),
                    np.array(e_list), np.array(e_over_m_list), np.array(accepted_position_list),
                    num_times_accepted, np.array(total_time_taken_list),
@@ -179,12 +185,13 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
                    output_split_char, output_file_descriptor)
 
 
-def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_chi_sq_test,
-                   max_p_value_chi_sq, use_monte_carlo, is_random_ordering, upper_p_value_threshold,
-                   lower_p_value_threshold, prob_monte_carlo, num_tests_array,
-                   num_fails_allowed_array, num_valid_attributes_array, theoretical_e_over_m_array,
-                   e_array, e_over_m_array, accepted_position_array, num_times_accepted,
-                   total_time_taken_array, time_taken_tree_array, time_taken_prunning_array,
+def save_fold_info(dataset_name, num_total_samples, num_training_samples, num_trials,
+                   criterion_name, use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
+                   is_random_ordering, upper_p_value_threshold, lower_p_value_threshold,
+                   prob_monte_carlo, num_tests_array, num_fails_allowed_array,
+                   num_valid_attributes_array, theoretical_e_over_m_array, e_array, e_over_m_array,
+                   accepted_position_array, num_times_accepted, total_time_taken_array,
+                   time_taken_tree_array, time_taken_prunning_array,
                    time_taken_num_tests_fails_array, time_taken_expected_tests_array,
                    accuracy_with_missing_values_array, accuracy_without_missing_values_array,
                    num_samples_missing_values_array, num_nodes_pruned_array, output_split_char,
@@ -194,7 +201,8 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_ch
     assert num_trials > 0
     line_list = [str(datetime.datetime.now()),
                  dataset_name,
-                 str(num_samples),
+                 str(num_total_samples),
+                 str(num_training_samples),
                  str(num_trials),
                  criterion_name,
                  str(MIN_NUM_SAMPLES_ALLOWED),
@@ -257,9 +265,10 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, use_ch
 
 
 def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_indices, split_chars,
-         missing_value_strings, num_samples, num_trials, use_chi_sq_test, max_p_value_chi_sq,
-         use_monte_carlo, use_random_ordering, upper_p_value_threshold, lower_p_value_threshold,
-         prob_monte_carlo, output_csv_filepath, output_split_char=OUTPUT_SPLIT_CHAR):
+         missing_value_strings, num_training_samples, num_trials, use_chi_sq_test,
+         max_p_value_chi_sq, use_monte_carlo, use_random_ordering, upper_p_value_threshold,
+         lower_p_value_threshold, prob_monte_carlo, output_csv_filepath,
+         output_split_char=OUTPUT_SPLIT_CHAR):
     with open(output_csv_filepath, 'a') as fout:
         for dataset_number, filepath in enumerate(datasets_filepaths):
             if not os.path.exists(filepath) or not os.path.isfile(filepath):
@@ -278,7 +287,7 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
                                    criteria.GiniGain(),
-                                   num_samples,
+                                   num_training_samples,
                                    num_trials,
                                    use_chi_sq_test,
                                    max_p_value_chi_sq,
@@ -295,7 +304,7 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
                                    criteria.GiniGain(),
-                                   num_samples,
+                                   num_training_samples,
                                    num_trials,
                                    use_chi_sq_test,
                                    max_p_value_chi_sq,
@@ -312,7 +321,7 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
                                    criteria.GiniGain(),
-                                   num_samples,
+                                   num_training_samples,
                                    num_trials,
                                    use_chi_sq_test,
                                    max_p_value_chi_sq,
@@ -399,12 +408,13 @@ if __name__ == '__main__':
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
         'outputs',
-        'single_level_experiment_3.csv')
+        'single_level_experiment_1.csv')
 
     with open(OUTPUT_CSV_FILEPATH, 'a') as FOUT:
         FIELDS_LIST = ['Date Time',
                        'Dataset',
-                       'Number of Samples',
+                       'Total Number of Samples',
+                       'Number of Training Samples',
                        'Number of Trials',
                        'Criterion',
                        'Number of Samples to Force a Leaf',
@@ -472,12 +482,12 @@ if __name__ == '__main__':
                        (0.3, 0.1, 0.95),
                        (0.3, 0.1, 0.99)]
 
-    NUM_SAMPLES = [10, 30, 50, 100]
+    NUM_TRAINING_SAMPLES = [10, 30, 50, 100]
 
     USE_RANDOM = [False, True]
     MAX_P_VALUE_CHI_SQ = [0.1]
 
-    for curr_num_samples in NUM_SAMPLES:
+    for curr_num_training_samples in NUM_TRAINING_SAMPLES:
         # Run without any bias treatment
         main(DATASET_NAMES,
              DATASETS_FILEPATHS,
@@ -485,7 +495,7 @@ if __name__ == '__main__':
              CLASS_ATTRIB_INDICES,
              SPLIT_CHARS,
              MISSING_VALUE_STRINGS,
-             curr_num_samples,
+             curr_num_training_samples,
              NUM_TRIALS,
              use_chi_sq_test=False,
              max_p_value_chi_sq=None,
@@ -503,7 +513,7 @@ if __name__ == '__main__':
                  CLASS_ATTRIB_INDICES,
                  SPLIT_CHARS,
                  MISSING_VALUE_STRINGS,
-                 curr_num_samples,
+                 curr_num_training_samples,
                  NUM_TRIALS,
                  use_chi_sq_test=True,
                  max_p_value_chi_sq=curr_max_p_value_chi_sq,
@@ -524,7 +534,7 @@ if __name__ == '__main__':
                  CLASS_ATTRIB_INDICES,
                  SPLIT_CHARS,
                  MISSING_VALUE_STRINGS,
-                 curr_num_samples,
+                 curr_num_training_samples,
                  NUM_TRIALS,
                  use_chi_sq_test=False,
                  max_p_value_chi_sq=None,

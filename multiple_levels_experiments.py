@@ -27,14 +27,13 @@ NUM_FOLDS = 10
 NUM_TRIALS = 5
 
 
-def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples,
-                           min_num_samples_allowed, max_depth, num_trials, use_chi_sq_test,
-                           max_p_value_chi_sq, use_monte_carlo, upper_p_value_threshold,
-                           lower_p_value_threshold, prob_monte_carlo, output_file_descriptor,
-                           output_split_char, seed=RANDOM_SEED):
-    """Runs `num_trials` experiments, each one randomly selecting `num_samples` valid samples to use
-    for training and testing the tree in the rest of the dataset. Saves the training and
-    classification information in the `output_file_descriptor` file.
+def monte_carlo_experiment(dataset_name, train_dataset, criterion, min_num_samples_allowed,
+                           max_depth, num_trials, use_chi_sq_test, max_p_value_chi_sq,
+                           use_monte_carlo, upper_p_value_threshold, lower_p_value_threshold,
+                           prob_monte_carlo, output_file_descriptor, output_split_char,
+                           seed=RANDOM_SEED):
+    """Runs `num_trials` experiments, each one doing a stratified cross-validation in `NUM_FOLDS`
+    folds. Saves the training and classification information in the `output_file_descriptor` file.
     """
     num_valid_attributes_list = []
 
@@ -91,34 +90,40 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples,
         tree_depth_list += max_depth_per_fold
         num_nodes_list += num_nodes_per_fold
 
-        accuracy_with_missing_values_list.append(num_correct_classifications_w_unkown / num_samples)
-        accuracy_without_missing_values_list.append(
-            num_correct_classifications_wo_unkown / num_samples)
+        accuracy_with_missing_values_list.append(
+            100.0 * num_correct_classifications_w_unkown / train_dataset.num_samples)
+        try:
+            accuracy_without_missing_values_list.append(
+                100.0 * num_correct_classifications_wo_unkown
+                / (train_dataset.num_samples - num_unkown))
+        except ZeroDivisionError:
+            pass
         num_unkown_list.append(num_unkown)
 
-    save_fold_info(dataset_name, num_samples, num_trials, criterion.name, min_num_samples_allowed,
-                   max_depth, use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
-                   criteria.ORDER_RANDOMLY, upper_p_value_threshold, lower_p_value_threshold,
-                   prob_monte_carlo, np.array(num_valid_attributes_list), np.array(num_nodes_list),
-                   np.array(tree_depth_list), np.array(total_time_taken_list),
-                   np.array(accuracy_with_missing_values_list),
+    save_fold_info(dataset_name, train_dataset.num_samples, num_trials, criterion.name,
+                   min_num_samples_allowed, max_depth, use_chi_sq_test, max_p_value_chi_sq,
+                   use_monte_carlo, criteria.ORDER_RANDOMLY, upper_p_value_threshold,
+                   lower_p_value_threshold, prob_monte_carlo, np.array(num_valid_attributes_list),
+                   np.array(num_nodes_list), np.array(tree_depth_list),
+                   np.array(total_time_taken_list), np.array(accuracy_with_missing_values_list),
                    np.array(accuracy_without_missing_values_list), np.array(num_unkown_list),
                    np.array(num_nodes_pruned_list), output_split_char, output_file_descriptor)
 
 
-def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, min_num_samples_allowed,
-                   max_depth, use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
-                   is_random_ordering, upper_p_value_threshold, lower_p_value_threshold,
-                   prob_monte_carlo, num_valid_attributes_array, num_nodes_array, tree_depth_array,
-                   total_time_taken_array, accuracy_with_missing_values_array,
-                   accuracy_without_missing_values_array, num_unkown_array, num_nodes_pruned_array,
-                   output_split_char, output_file_descriptor):
+def save_fold_info(dataset_name, num_total_samples, num_trials, criterion_name,
+                   min_num_samples_allowed, max_depth, use_chi_sq_test, max_p_value_chi_sq,
+                   use_monte_carlo, is_random_ordering, upper_p_value_threshold,
+                   lower_p_value_threshold, prob_monte_carlo, num_valid_attributes_array,
+                   num_nodes_array, tree_depth_array, total_time_taken_array,
+                   accuracy_with_missing_values_array, accuracy_without_missing_values_array,
+                   num_unkown_array, num_nodes_pruned_array, output_split_char,
+                   output_file_descriptor):
     """Saves the experiment information in the CSV file.
     """
     assert num_trials > 0
     line_list = [str(datetime.datetime.now()),
                  dataset_name,
-                 str(num_samples),
+                 str(num_total_samples),
                  str(num_trials),
                  criterion_name,
                  str(min_num_samples_allowed),
@@ -158,9 +163,9 @@ def save_fold_info(dataset_name, num_samples, num_trials, criterion_name, min_nu
 
 
 def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_indices, split_chars,
-         missing_value_strings, num_samples, min_num_samples_allowed, max_depth, num_trials,
-         use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo, use_random_ordering,
-         upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo, output_csv_filepath,
+         missing_value_strings, min_num_samples_allowed, max_depth, num_trials, use_chi_sq_test,
+         max_p_value_chi_sq, use_monte_carlo, use_random_ordering, upper_p_value_threshold,
+         lower_p_value_threshold, prob_monte_carlo, output_csv_filepath,
          output_split_char=OUTPUT_SPLIT_CHAR):
     with open(output_csv_filepath, 'a') as fout:
         for dataset_number, filepath in enumerate(datasets_filepaths):
@@ -180,7 +185,6 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
                                    criteria.GiniGain(),
-                                   num_samples,
                                    min_num_samples_allowed,
                                    max_depth,
                                    num_trials,
@@ -199,7 +203,6 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
                                    criteria.GiniGain(),
-                                   num_samples,
                                    min_num_samples_allowed,
                                    max_depth,
                                    num_trials,
@@ -218,7 +221,6 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
                                    criteria.GiniGain(),
-                                   num_samples,
                                    min_num_samples_allowed,
                                    max_depth,
                                    num_trials,
@@ -308,12 +310,12 @@ if __name__ == '__main__':
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
         'outputs',
-        'multiple_levels_experiment_3.csv')
+        'multiple_levels_experiment_1.csv')
 
     with open(OUTPUT_CSV_FILEPATH, 'a') as FOUT:
         FIELDS_LIST = ['Date Time',
                        'Dataset',
-                       'Number of Samples',
+                       'Total Number of Samples',
                        'Number of Trials',
                        'Criterion',
                        'Number of Samples Forcing a Leaf',
@@ -358,16 +360,14 @@ if __name__ == '__main__':
                        (0.3, 0.1, 0.95),
                        (0.3, 0.1, 0.99)]
 
-    NUM_SAMPLES = [10, 30, 50, 100]
-
     USE_RANDOM = [False, True]
     MAX_P_VALUE_CHI_SQ = [0.1]
     MIN_NUM_SAMPLES_ALLOWED = [1]
     MAX_DEPTH = [5]
 
-    for (curr_num_samples,
-         curr_min_num_samples_allowed,
-         curr_max_depth) in itertools.product(NUM_SAMPLES, MIN_NUM_SAMPLES_ALLOWED, MAX_DEPTH):
+    for (curr_min_num_samples_allowed,
+         curr_max_depth) in itertools.product(MIN_NUM_SAMPLES_ALLOWED,
+                                              MAX_DEPTH):
         # Run without any bias treatment
         main(DATASET_NAMES,
              DATASETS_FILEPATHS,
@@ -375,7 +375,6 @@ if __name__ == '__main__':
              CLASS_ATTRIB_INDICES,
              SPLIT_CHARS,
              MISSING_VALUE_STRINGS,
-             curr_num_samples,
              curr_min_num_samples_allowed,
              curr_max_depth,
              NUM_TRIALS,
@@ -395,7 +394,6 @@ if __name__ == '__main__':
                  CLASS_ATTRIB_INDICES,
                  SPLIT_CHARS,
                  MISSING_VALUE_STRINGS,
-                 curr_num_samples,
                  curr_min_num_samples_allowed,
                  curr_max_depth,
                  NUM_TRIALS,
@@ -418,7 +416,6 @@ if __name__ == '__main__':
                  CLASS_ATTRIB_INDICES,
                  SPLIT_CHARS,
                  MISSING_VALUE_STRINGS,
-                 curr_num_samples,
                  curr_min_num_samples_allowed,
                  curr_max_depth,
                  NUM_TRIALS,

@@ -426,8 +426,8 @@ class GiniGain(Criterion):
                 if num_fails_seen > num_fails_allowed:
                     return False, test_number
             if num_tests - test_number <= num_fails_allowed - num_fails_seen:
-                return True, None
-        return True, None
+                return True, test_number
+        return True, num_tests
 
 
 
@@ -540,7 +540,7 @@ class Twoing(Criterion):
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
-                attrib_index, _, criterion_value = best_attrib_split[0]
+                attrib_index, _, criterion_value = best_attrib_split
                 (should_accept,
                  num_tests_needed) = cls._accept_attribute(
                      criterion_value,
@@ -788,8 +788,8 @@ class Twoing(Criterion):
                 if num_fails_seen > num_fails_allowed:
                     return False, test_number
             if num_tests - test_number <= num_fails_allowed - num_fails_seen:
-                return True, None
-        return True, None
+                return True, test_number
+        return True, num_tests
 
 
 
@@ -964,5 +964,5 @@ class GainRatio(Criterion):
                 if num_fails_seen > num_fails_allowed:
                     return False, test_number
             if num_tests - test_number <= num_fails_allowed - num_fails_seen:
-                return True, None
-        return True, None
+                return True, test_number
+        return True, num_tests

@@ -285,7 +285,7 @@ if __name__ == '__main__':
         FIELDS_LIST = ['Date Time',
                        'Dataset',
                        'Total Number of Samples',
-                       'Number of Trials',
+                       'Trial Number',
                        'Criterion',
                        'Number of Samples Forcing a Leaf',
                        'Maximum Depth Allowed',

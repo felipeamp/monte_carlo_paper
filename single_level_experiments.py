@@ -136,6 +136,9 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_training_
             e_over_m_list.append(
                 root_node.node_split.total_num_tests_needed / num_valid_attributes_list[-1])
             accepted_position_list.append(root_node.node_split.accepted_position)
+        else:
+            e_list.append(root_node.num_tests * num_valid_attributes_list[-1])
+            e_over_m_list.append(root_node.num_tests)
 
         total_time_taken_list.append(total_time_taken)
         time_taken_prunning_list.append(time_taken_prunning)
@@ -243,23 +246,31 @@ def save_fold_info(dataset_name, num_total_samples, num_training_samples, num_tr
                  str(np.amin(e_over_m_array)),
                  str(np.std(e_over_m_array)),
 
-                 str(num_times_accepted),
-                 str(np.mean(accepted_position_array)),
-                 str(np.amax(accepted_position_array)),
-                 str(np.amin(accepted_position_array)),
-                 str(np.std(accepted_position_array)),
+                 str(num_times_accepted)]
 
-                 str(np.mean(total_time_taken_array)),
-                 str(np.mean(time_taken_tree_array)),
-                 str(np.mean(time_taken_prunning_array)),
-                 str(np.mean(time_taken_num_tests_fails_array)),
-                 str(np.mean(time_taken_expected_tests_array)),
+    if len(accepted_position_array) > 0:
+        line_list += [str(np.mean(accepted_position_array)),
+                      str(np.amax(accepted_position_array)),
+                      str(np.amin(accepted_position_array)),
+                      str(np.std(accepted_position_array))]
+    else:
+        line_list += [str(None), str(None), str(None), str(None)]
 
-                 str(np.mean(accuracy_with_missing_values_array)),
-                 str(np.mean(accuracy_without_missing_values_array)),
-                 str(np.mean(num_samples_missing_values_array)),
+    line_list += [str(np.mean(total_time_taken_array)),
+                  str(np.mean(time_taken_tree_array)),
+                  str(np.mean(time_taken_prunning_array)),
+                  str(np.mean(time_taken_num_tests_fails_array)),
+                  str(np.mean(time_taken_expected_tests_array)),
 
-                 str(np.mean(num_nodes_pruned_array))]
+                  str(np.mean(accuracy_with_missing_values_array))]
+
+    if len(accuracy_without_missing_values_array) > 0:
+        line_list.append(str(np.mean(accuracy_without_missing_values_array)))
+    else:
+        line_list.append(str(None))
+
+    line_list += [str(np.mean(num_samples_missing_values_array)),
+                  str(np.mean(num_nodes_pruned_array))]
 
     print(output_split_char.join(line_list), file=output_file_descriptor)
     output_file_descriptor.flush()

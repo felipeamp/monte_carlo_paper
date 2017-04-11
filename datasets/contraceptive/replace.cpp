@@ -48,21 +48,21 @@ int main()
 	dict[2].insert(mp("4", "high"));
 
 	//Number of children ever born
-	dict[3].insert(mp("0", "zero"));
-	dict[3].insert(mp("1", "one"));
-	dict[3].insert(mp("2", "two"));
-	dict[3].insert(mp("3", "three"));
-	dict[3].insert(mp("4", "four"));
-	dict[3].insert(mp("5", "five"));
-	dict[3].insert(mp("6", "six"));
-	dict[3].insert(mp("7", "seven"));
-	dict[3].insert(mp("8", "eight"));
-	dict[3].insert(mp("9", "nine"));
-	dict[3].insert(mp("10", "ten"));
-	dict[3].insert(mp("11", "eleven"));
-	dict[3].insert(mp("12", "twelve"));
-	dict[3].insert(mp("13", "thirteen"));
-	dict[3].insert(mp("14", "fourteen"));
+	dict[3].insert(mp("zero", "0"));
+	dict[3].insert(mp("one", "1"));
+	dict[3].insert(mp("two", "2"));
+	dict[3].insert(mp("three", "3"));
+	dict[3].insert(mp("four", "4"));
+	dict[3].insert(mp("five", "5"));
+	dict[3].insert(mp("six", "6"));
+	dict[3].insert(mp("seven", "7"));
+	dict[3].insert(mp("eight", "8"));
+	dict[3].insert(mp("nine", "9"));
+	dict[3].insert(mp("ten", "10"));
+	dict[3].insert(mp("eleven", "11"));
+	dict[3].insert(mp("twelve", "12"));
+	dict[3].insert(mp("thirteen", "13"));
+	dict[3].insert(mp("fourteen", "14"));
 
 	//Wife's religion
 	dict[4].insert(mp("0", "Non-Islam"));
@@ -93,8 +93,8 @@ int main()
 	dict[9].insert(mp("1", "Long-term"));
 	dict[9].insert(mp("2", "Short-term"));
 
-	ifstream in; in.open("data.csv");
-	ofstream out; out.open("fixedData.csv");
+	ifstream in; in.open("wrong.csv");
+	ofstream out; out.open("contraceptive.csv");
 	string line;
 	while(getline(in, line))
 	{
@@ -104,7 +104,10 @@ int main()
 		fr(i, 1, sz(fields))
 		{
 			out << ",";
-			out << dict[i][fields[i]];
+			if(i == 3)
+				out << dict[i][fields[i]];
+			else
+				out << fields[i];
 		}
 		out << endl;
 	}

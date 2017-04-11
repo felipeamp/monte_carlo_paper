@@ -169,7 +169,8 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
             return None
         return num_tests_high
 
-
+    # # DEBUG:
+    # print('Starting get_tests_and_fails_allowed...')
     assert upper_p_value_threshold > lower_p_value_threshold
     assert upper_p_value_threshold <= 1.0 and upper_p_value_threshold > 0.0
     assert lower_p_value_threshold < 1.0 and lower_p_value_threshold >= 0.0
@@ -180,6 +181,8 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
             lower_p_value_threshold,
             prob_monte_carlo,
             num_valid_nominal_attributes) in _MONTE_CARLO_T_F_CACHE:
+        # # DEBUG:
+        # print('Found in cache!')
         return _MONTE_CARLO_T_F_CACHE[(upper_p_value_threshold,
                                        lower_p_value_threshold,
                                        prob_monte_carlo,
@@ -188,9 +191,14 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
     # We need to calculate these new values of num_tests and num_fails_allowed.
     num_fails_allowed = 0
     while True:
+        # # DEBUG:
+        # print('-----')
+        # print('num_fails_allowed:', num_fails_allowed)
         largest_num_tests_l = _find_largest_num_tests_l(num_fails_allowed,
                                                         lower_p_value_threshold,
                                                         prob_monte_carlo)
+        # # DEBUG:
+        # print('largest_num_tests_l:', largest_num_tests_l)
         if largest_num_tests_l is None:
             num_fails_allowed += 1
             continue
@@ -198,17 +206,23 @@ def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold
         smallest_num_tests_u = _find_smallest_num_tests_u(num_fails_allowed,
                                                           upper_p_value_threshold,
                                                           prob_monte_carlo)
+        # # DEBUG:
+        # print('smallest_num_tests_u:', smallest_num_tests_u)
         if smallest_num_tests_u is None:
             num_fails_allowed += 1
             continue
 
         if smallest_num_tests_u <= largest_num_tests_l:
+            # # DEBUG:
+            # print('found!')
+            # print('t =', smallest_num_tests_u)
             _MONTE_CARLO_T_F_CACHE[(upper_p_value_threshold,
                                     lower_p_value_threshold,
                                     prob_monte_carlo,
                                     num_valid_nominal_attributes)] = (smallest_num_tests_u,
                                                                       num_fails_allowed)
             return (smallest_num_tests_u, num_fails_allowed)
+        num_fails_allowed += 1
     return (None, None)
 
 

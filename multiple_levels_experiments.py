@@ -35,18 +35,6 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, min_num_sampl
     """Runs `num_trials` experiments, each one doing a stratified cross-validation in `NUM_FOLDS`
     folds. Saves the training and classification information in the `output_file_descriptor` file.
     """
-    num_valid_attributes_list = []
-
-    num_nodes_list = []
-    tree_depth_list = []
-
-    total_time_taken_list = []
-
-    accuracy_with_missing_values_list = []
-    accuracy_without_missing_values_list = []
-    num_unkown_list = []
-    num_nodes_pruned_list = []
-
     for trial_number in range(num_trials):
         print('*'*80)
         print('STARTING TRIAL #{}'.format(trial_number + 1))
@@ -83,48 +71,38 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, min_num_sampl
              use_stop_conditions=use_chi_sq_test,
              max_p_value_chi_sq=max_p_value_chi_sq)
         total_time_taken = timeit.default_timer() - start_time
-        total_time_taken_list.append(total_time_taken)
-
-        num_valid_attributes_list += num_valid_attributes_in_root
-        num_nodes_pruned_list += num_nodes_prunned_per_fold
-        tree_depth_list += max_depth_per_fold
-        num_nodes_list += num_nodes_per_fold
-
-        accuracy_with_missing_values_list.append(
-            100.0 * num_correct_classifications_w_unkown / train_dataset.num_samples)
+        accuracy_with_missing_values = (100.0 * num_correct_classifications_w_unkown
+                                        / train_dataset.num_samples)
         try:
-            accuracy_without_missing_values_list.append(
-                100.0 * num_correct_classifications_wo_unkown
-                / (train_dataset.num_samples - num_unkown))
+            accuracy_without_missing_values = (100.0 * num_correct_classifications_wo_unkown
+                                               / (train_dataset.num_samples - num_unkown))
         except ZeroDivisionError:
-            pass
-        num_unkown_list.append(num_unkown)
+            accuracy_without_missing_values = None
 
-    save_fold_info(dataset_name, train_dataset.num_samples, num_trials, criterion.name,
-                   min_num_samples_allowed, max_depth, use_chi_sq_test, max_p_value_chi_sq,
-                   use_monte_carlo, criteria.ORDER_RANDOMLY, upper_p_value_threshold,
-                   lower_p_value_threshold, prob_monte_carlo, np.array(num_valid_attributes_list),
-                   np.array(num_nodes_list), np.array(tree_depth_list),
-                   np.array(total_time_taken_list), np.array(accuracy_with_missing_values_list),
-                   np.array(accuracy_without_missing_values_list), np.array(num_unkown_list),
-                   np.array(num_nodes_pruned_list), output_split_char, output_file_descriptor)
+        save_trial_info(dataset_name, train_dataset.num_samples, trial_number + 1, criterion.name,
+                        min_num_samples_allowed, max_depth, use_chi_sq_test, max_p_value_chi_sq,
+                        use_monte_carlo, criteria.ORDER_RANDOMLY, upper_p_value_threshold,
+                        lower_p_value_threshold, prob_monte_carlo,
+                        np.mean(num_valid_attributes_in_root), np.mean(num_nodes_per_fold),
+                        np.mean(max_depth_per_fold), total_time_taken, accuracy_with_missing_values,
+                        accuracy_without_missing_values, num_unkown,
+                        np.mean(num_nodes_prunned_per_fold), output_split_char,
+                        output_file_descriptor)
 
 
-def save_fold_info(dataset_name, num_total_samples, num_trials, criterion_name,
-                   min_num_samples_allowed, max_depth, use_chi_sq_test, max_p_value_chi_sq,
-                   use_monte_carlo, is_random_ordering, upper_p_value_threshold,
-                   lower_p_value_threshold, prob_monte_carlo, num_valid_attributes_array,
-                   num_nodes_array, tree_depth_array, total_time_taken_array,
-                   accuracy_with_missing_values_array, accuracy_without_missing_values_array,
-                   num_unkown_array, num_nodes_pruned_array, output_split_char,
-                   output_file_descriptor):
+def save_trial_info(dataset_name, num_total_samples, trial_number, criterion_name,
+                    min_num_samples_allowed, max_depth, use_chi_sq_test, max_p_value_chi_sq,
+                    use_monte_carlo, is_random_ordering, upper_p_value_threshold,
+                    lower_p_value_threshold, prob_monte_carlo, avg_num_valid_attributes_in_root,
+                    avg_num_nodes, avg_tree_depth, total_time_taken, accuracy_with_missing_values,
+                    accuracy_without_missing_values, num_unkown, avg_num_nodes_pruned,
+                    output_split_char, output_file_descriptor):
     """Saves the experiment information in the CSV file.
     """
-    assert num_trials > 0
     line_list = [str(datetime.datetime.now()),
                  dataset_name,
                  str(num_total_samples),
-                 str(num_trials),
+                 str(trial_number),
                  criterion_name,
                  str(min_num_samples_allowed),
                  str(max_depth),
@@ -139,27 +117,21 @@ def save_fold_info(dataset_name, num_total_samples, num_trials, criterion_name,
                  str(lower_p_value_threshold),
                  str(prob_monte_carlo),
 
-                 str(np.mean(num_valid_attributes_array)),
-                 str(np.amax(num_valid_attributes_array)),
-                 str(np.amin(num_valid_attributes_array)),
+                 str(avg_num_valid_attributes_in_root),
 
-                 str(np.mean(num_nodes_array)),
-                 str(np.amax(num_nodes_array)),
-                 str(np.amin(num_nodes_array)),
+                 str(avg_num_nodes),
+                 str(avg_tree_depth),
 
-                 str(np.mean(tree_depth_array)),
-                 str(np.amax(tree_depth_array)),
-                 str(np.amin(tree_depth_array)),
+                 str(total_time_taken),
 
-                 str(np.mean(total_time_taken_array)),
+                 str(accuracy_with_missing_values),
+                 str(accuracy_without_missing_values),
+                 str(num_unkown),
 
-                 str(np.mean(accuracy_with_missing_values_array)),
-                 str(np.mean(accuracy_without_missing_values_array)),
-                 str(np.mean(num_unkown_array)),
-
-                 str(np.mean(num_nodes_pruned_array))]
+                 str(avg_num_nodes_pruned)]
 
     print(output_split_char.join(line_list), file=output_file_descriptor)
+    output_file_descriptor.flush()
 
 
 def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_indices, split_chars,
@@ -196,13 +168,12 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    prob_monte_carlo,
                                    fout,
                                    output_split_char)
-            fout.flush()
             print('-'*100)
             print('Twoing')
             print()
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
-                                   criteria.GiniGain(),
+                                   criteria.Twoing(),
                                    min_num_samples_allowed,
                                    max_depth,
                                    num_trials,
@@ -214,13 +185,12 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    prob_monte_carlo,
                                    fout,
                                    output_split_char)
-            fout.flush()
             print('-'*100)
             print('Gain Ratio')
             print()
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
-                                   criteria.GiniGain(),
+                                   criteria.GainRatio(),
                                    min_num_samples_allowed,
                                    max_depth,
                                    num_trials,
@@ -232,7 +202,6 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    prob_monte_carlo,
                                    fout,
                                    output_split_char)
-            fout.flush()
 
 
 if __name__ == '__main__':
@@ -332,25 +301,17 @@ if __name__ == '__main__':
                        'prob_monte_carlo [between 0 and 1]',
 
                        'Average Number of Valid Attributes in Root Node (m)',
-                       'Maximum Number of Valid Attributes in Root Node (m)',
-                       'Minimum Number of Valid Attributes in Root Node (m)',
 
                        'Average Number of Nodes (after prunning)',
-                       'Maximum Number of Nodes (after prunning)',
-                       'Minimum Number of Nodes (after prunning)',
-
                        'Average Tree Depth (after prunning)',
-                       'Maximum Tree Depth (after prunning)',
-                       'Minimum Tree Depth (after prunning)',
 
-                       'Average Total Time Taken [s]',
+                       'Total Time Taken for Cross-Validation [s]',
 
-                       'Average Accuracy Percentage (with missing values)',
-                       'Average Accuracy Percentage (without missing values)',
-                       'Average Number of Samples Classified using Unkown Value',
+                       'Accuracy Percentage (with missing values)',
+                       'Accuracy Percentage (without missing values)',
+                       'Number of Samples Classified using Unkown Value',
 
                        'Average Number of Nodes Pruned']
-
         print(OUTPUT_SPLIT_CHAR.join(FIELDS_LIST), file=FOUT)
         FOUT.flush()
 

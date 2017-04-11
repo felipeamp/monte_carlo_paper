@@ -262,6 +262,7 @@ def save_fold_info(dataset_name, num_total_samples, num_training_samples, num_tr
                  str(np.mean(num_nodes_pruned_array))]
 
     print(output_split_char.join(line_list), file=output_file_descriptor)
+    output_file_descriptor.flush()
 
 
 def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_indices, split_chars,
@@ -297,13 +298,12 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    prob_monte_carlo,
                                    fout,
                                    output_split_char)
-            fout.flush()
             print('-'*100)
             print('Twoing')
             print()
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
-                                   criteria.GiniGain(),
+                                   criteria.Twoing(),
                                    num_training_samples,
                                    num_trials,
                                    use_chi_sq_test,
@@ -314,13 +314,12 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    prob_monte_carlo,
                                    fout,
                                    output_split_char)
-            fout.flush()
             print('-'*100)
             print('Gain Ratio')
             print()
             monte_carlo_experiment(dataset_names[dataset_number],
                                    train_dataset,
-                                   criteria.GiniGain(),
+                                   criteria.GainRatio(),
                                    num_training_samples,
                                    num_trials,
                                    use_chi_sq_test,
@@ -331,7 +330,6 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    prob_monte_carlo,
                                    fout,
                                    output_split_char)
-            fout.flush()
 
 
 if __name__ == '__main__':

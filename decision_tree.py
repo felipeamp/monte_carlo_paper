@@ -16,9 +16,12 @@ from scipy.stats import chi2
 import monte_carlo
 
 
-#: Minimum number of samples in the two largest entries of a contingency table so that the attribute
-#: is considered valid.
-MIN_ALLOWED_IN_TWO_LARGEST = 40
+#: Minimum number of samples needed in the two most frequent values of an attribute such that it is
+#: considered valid.
+MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE = 40
+#: Minimum number of samples needed in the two most frequent classes such that this node can be
+#: split.
+MIN_SAMPLES_SECOND_LARGEST_CLASS = 40
 
 
 class DecisionTree(object):
@@ -169,13 +172,14 @@ class DecisionTree(object):
             use_stop_conditions (bool, optional): informs wether we should use prunning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
-                than `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at
-                least two classes have this number of samples) or if a chi-square test, applied on
-                the attributes' contingency table has a p-value greater or equal to
-                `max_p_value_chi_sq`. When an attribute is considered invalid for the above
-                reasons, this information will be passed to every child node of the current
-                TreeNode. Note that numeric attributes are never tested in this way.Defaults to
-                `False`.
+                than `MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE` samples in the second most frequent
+                value (this way at least two values have this number of samples) or if a chi-square
+                test, applied on the attributes' contingency table has a p-value greater or equal to
+                `max_p_value_chi_sq`. When an attribute is considered invalid for the number of
+                samples in the second most frequent value, it will be considered invalid in every
+                child node of the current TreeNode. If it was considered invalid because of the
+                chi-square test, it can be considered valid in a descendant node. Note that numeric
+                attributes are never tested in this way. Defaults to `False`.
             max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
                 be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
@@ -229,13 +233,14 @@ class DecisionTree(object):
             use_stop_conditions (bool, optional): informs wether we should use prunning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
-                than `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at
-                least two classes have this number of samples) or if a chi-square test, applied on
-                the attributes' contingency table has a p-value greater or equal to
-                `max_p_value_chi_sq`. When an attribute is considered invalid for the above
-                reasons, this information will be passed to every child node of the current
-                TreeNode. Note that numeric attributes are never tested in this way.Defaults to
-                `False`.
+                than `MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE` samples in the second most frequent
+                value (this way at least two values have this number of samples) or if a chi-square
+                test, applied on the attributes' contingency table has a p-value greater or equal to
+                `max_p_value_chi_sq`. When an attribute is considered invalid for the number of
+                samples in the second most frequent value, it will be considered invalid in every
+                child node of the current TreeNode. If it was considered invalid because of the
+                chi-square test, it can be considered valid in a descendant node. Note that numeric
+                attributes are never tested in this way. Defaults to `False`.
             max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
                 be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
@@ -306,13 +311,14 @@ class DecisionTree(object):
             use_stop_conditions (bool, optional): informs wether we should use prunning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
-                than `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at
-                least two classes have this number of samples) or if a chi-square test, applied on
-                the attributes' contingency table has a p-value greater or equal to
-                `max_p_value_chi_sq`. When an attribute is considered invalid for the above
-                reasons, this information will be passed to every child node of the current
-                TreeNode. Note that numeric attributes are never tested in this way.Defaults to
-                `False`.
+                than `MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE` samples in the second most frequent
+                value (this way at least two values have this number of samples) or if a chi-square
+                test, applied on the attributes' contingency table has a p-value greater or equal to
+                `max_p_value_chi_sq`. When an attribute is considered invalid for the number of
+                samples in the second most frequent value, it will be considered invalid in every
+                child node of the current TreeNode. If it was considered invalid because of the
+                chi-square test, it can be considered valid in a descendant node. Note that numeric
+                attributes are never tested in this way. Defaults to `False`.
             max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
                 be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
@@ -697,13 +703,14 @@ class TreeNode(object):
             use_stop_conditions (bool, optional): informs wether we should use prunning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
-                than `MIN_ALLOWED_IN_TWO_LARGEST` samples in the second largest class (this way at
-                least two classes have this number of samples) or if a chi-square test, applied on
-                the attributes' contingency table has a p-value greater or equal to
-                `max_p_value_chi_sq`. When an attribute is considered invalid for the above
-                reasons, this information will be passed to every child node of the current
-                TreeNode. Note that numeric attributes are never tested in this way.Defaults to
-                `False`.
+                than `MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE` samples in the second most frequent
+                value (this way at least two values have this number of samples) or if a chi-square
+                test, applied on the attributes' contingency table has a p-value greater or equal to
+                `max_p_value_chi_sq`. When an attribute is considered invalid for the number of
+                samples in the second most frequent value, it will be considered invalid in every
+                child node of the current TreeNode. If it was considered invalid because of the
+                chi-square test, it can be considered valid in a descendant node. Note that numeric
+                attributes are never tested in this way. Defaults to `False`.
             max_p_value_chi_sq (float, optional): is the maximum p-value allowed for an attribute to
                 be accepted when doing chi-square tests (that is, when `use_stop_conditions` is
                 `True`). A p-value of 1.0 is equal to 100%. Defaults to `0.1`.
@@ -791,7 +798,7 @@ class TreeNode(object):
     def _is_attribute_valid(self, attrib_index, min_allowed_in_two_largest):
         """Returns a pair of booleans indicating:
             - wether the current attribute has more than `min_allowed_in_two_largest` samples in
-                second largest class;
+                second most frequent value;
             - wether the condition above is `True` AND its chi-square test's p-value is smaller than
                 `self._max_p_value_chi_sq`.
         """
@@ -881,12 +888,20 @@ class TreeNode(object):
         def _has_multiple_values(values_num_samples):
             return sum(num_samples > 0 for num_samples in values_num_samples) > 1
 
+        def _has_enough_samples_in_second_largest_class(class_index_num_samples,
+                                                        most_common_int_class):
+            second_largest = max(num_samples
+                                 for class_index, num_samples in enumerate(class_index_num_samples)
+                                 if class_index != most_common_int_class)
+            return second_largest >= MIN_SAMPLES_SECOND_LARGEST_CLASS
 
 
         # Is it time to stop growing subtrees?
         if (self.max_depth_remaining <= 0
                 or self.num_valid_samples < self._min_samples_per_node
-                or self.number_non_empty_classes == 1):
+                or self.number_non_empty_classes == 1
+                or _has_enough_samples_in_second_largest_class(self.class_index_num_samples,
+                                                               self.most_common_int_class)):
             return None
 
         # If a valid attribute has only one value, it should be marked as invalid from this node on.
@@ -907,10 +922,10 @@ class TreeNode(object):
                  is_valid_nominal_attribute) in enumerate(self.valid_nominal_attribute):
                 if is_valid_nominal_attribute:
                     (is_valid_num_samples,
-                     is_valid_chi_sq) = (self._is_attribute_valid(
+                     is_valid_chi_sq_and_num_samples) = (self._is_attribute_valid(
                          attrib_index,
-                         min_allowed_in_two_largest=MIN_ALLOWED_IN_TWO_LARGEST))
-                    if is_valid_chi_sq:
+                         min_allowed_in_two_largest=MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE))
+                    if is_valid_chi_sq_and_num_samples:
                         num_valid_attributes += 1
                     elif is_valid_num_samples:
                         new_valid_nominal_attribute_incl_chi_sq_test[attrib_index] = False
@@ -1000,8 +1015,9 @@ class TreeNode(object):
         # Create subtrees
         self.is_leaf = False
         if self._use_stop_conditions:
-            # Any attribute that has enough samples in the second largest could pass the chi-square
-            # test in a descendant node.
+            # Any attribute that has enough samples in the second most frequent value could pass the
+            # chi-square test in a descendant node, thus we don't send the information of chi-square
+            # test to child nodes.
             self.valid_nominal_attribute = new_valid_nominal_attribute
         for curr_split_samples_indices in splits_samples_indices:
             self.nodes.append(TreeNode(self.dataset,

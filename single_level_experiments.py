@@ -26,6 +26,10 @@ OUTPUT_SPLIT_CHAR = ','
 MAX_DEPTH = 1
 #: Minimum number of samples allowed in a TreeNode and still allowing it to split during training.
 MIN_NUM_SAMPLES_ALLOWED = 1
+#: Number of experiments to be done with each parameters combination.
+NUM_TRIALS = 5
+#: Maximum number of random training sample generation before giving up.
+MAX_RANDOM_TRIES = 10
 
 
 def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, num_trials,
@@ -65,7 +69,11 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
     num_samples_missing_values_list = []
     num_nodes_pruned_list = []
 
-    for _ in range(num_trials):
+    for trial_number in range(num_trials):
+        print('*'*80)
+        print('STARTING TRIAL #{}'.format(trial_number + 1))
+        print()
+
         random.shuffle(training_samples_indices)
         curr_training_samples_indices = training_samples_indices[:num_samples]
         curr_test_samples_indices = training_samples_indices[num_samples:]
@@ -88,8 +96,15 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples, 
                                          calculate_expected_tests=use_monte_carlo)
         total_time_taken = timeit.default_timer() - start_time
 
+        num_random_tries = 1
         while (sorted(tree.get_root_node().class_index_num_samples)[-2] == 0
                or sum(tree.get_root_node().valid_nominal_attribute) == 0):
+            num_random_tries += 1
+            if num_random_tries == MAX_RANDOM_TRIES:
+                print('Already did {} random generation, none worked (only one class or no valid'
+                      ' attribute).'.format(MAX_RANDOM_TRIES))
+                print('Will skip to the next test.')
+                return None
             random.shuffle(training_samples_indices)
             curr_training_samples_indices = training_samples_indices[:num_samples]
             curr_test_samples_indices = training_samples_indices[num_samples: 2 * num_samples]
@@ -384,7 +399,7 @@ if __name__ == '__main__':
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
         'outputs',
-        'single_level_experiment_1.csv')
+        'single_level_experiment_3.csv')
 
     with open(OUTPUT_CSV_FILEPATH, 'a') as FOUT:
         FIELDS_LIST = ['Date Time',
@@ -458,7 +473,6 @@ if __name__ == '__main__':
                        (0.3, 0.1, 0.99)]
 
     NUM_SAMPLES = [10, 30, 50, 100]
-    NUM_TRIALS = 50
 
     USE_RANDOM = [False, True]
     MAX_P_VALUE_CHI_SQ = [0.1]

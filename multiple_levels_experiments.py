@@ -23,6 +23,8 @@ RANDOM_SEED = 65537
 OUTPUT_SPLIT_CHAR = ','
 #: Number of folds to be used during cross-validation.
 NUM_FOLDS = 10
+#: Number of experiments to be done with each parameters combination.
+NUM_TRIALS = 5
 
 
 def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples,
@@ -46,7 +48,11 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_samples,
     num_unkown_list = []
     num_nodes_pruned_list = []
 
-    for _ in range(num_trials):
+    for trial_number in range(num_trials):
+        print('*'*80)
+        print('STARTING TRIAL #{}'.format(trial_number + 1))
+        print()
+
         tree = decision_tree.DecisionTree(criterion=criterion,
                                           is_monte_carlo_criterion=use_monte_carlo,
                                           upper_p_value_threshold=upper_p_value_threshold,
@@ -302,7 +308,7 @@ if __name__ == '__main__':
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
         'outputs',
-        'multiple_levels_experiment_1.csv')
+        'multiple_levels_experiment_3.csv')
 
     with open(OUTPUT_CSV_FILEPATH, 'a') as FOUT:
         FIELDS_LIST = ['Date Time',
@@ -353,7 +359,6 @@ if __name__ == '__main__':
                        (0.3, 0.1, 0.99)]
 
     NUM_SAMPLES = [10, 30, 50, 100]
-    NUM_TRIALS = 50
 
     USE_RANDOM = [False, True]
     MAX_P_VALUE_CHI_SQ = [0.1]

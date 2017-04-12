@@ -224,11 +224,21 @@ if __name__ == '__main__':
     SPLIT_CHARS.append(',')
     MISSING_VALUE_STRINGS.append('')
 
-    # Car:
+    # Cars:
     DATASET_NAMES.append('Cars')
     DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
                                            'cars'
                                            'cars.csv'))
+    KEY_ATTRIB_INDICES.append(None)
+    CLASS_ATTRIB_INDICES.append(-1)
+    SPLIT_CHARS.append(',')
+    MISSING_VALUE_STRINGS.append(None)
+
+    # Contraceptive:
+    DATASET_NAMES.append('Contraceptive')
+    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+                                           'contraceptive'
+                                           'contraceptive.csv'))
     KEY_ATTRIB_INDICES.append(None)
     CLASS_ATTRIB_INDICES.append(-1)
     SPLIT_CHARS.append(',')
@@ -261,6 +271,16 @@ if __name__ == '__main__':
                                            'poker-hand-modified.csv'))
     KEY_ATTRIB_INDICES.append(None)
     CLASS_ATTRIB_INDICES.append(-1)
+    SPLIT_CHARS.append(',')
+    MISSING_VALUE_STRINGS.append(None)
+
+    # Splice Junction:
+    DATASET_NAMES.append('Splice Junction')
+    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+                                           'splice junction'
+                                           'splice-junction-modified.csv'))
+    KEY_ATTRIB_INDICES.append(1)
+    CLASS_ATTRIB_INDICES.append(0)
     SPLIT_CHARS.append(',')
     MISSING_VALUE_STRINGS.append(None)
 

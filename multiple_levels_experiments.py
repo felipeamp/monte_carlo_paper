@@ -13,18 +13,13 @@ import timeit
 import criteria
 import dataset
 import decision_tree
+import monte_carlo
 
 import numpy as np
 
 
 #: Initial seed used in `random` and `numpy.random` modules.
 RANDOM_SEED = 65537
-#: Character used to split cells in the output csv file.
-OUTPUT_SPLIT_CHAR = ','
-#: Number of folds to be used during cross-validation.
-NUM_FOLDS = 10
-#: Number of experiments to be done with each parameters combination.
-NUM_TRIALS = 5
 
 
 def monte_carlo_experiment(dataset_name, train_dataset, criterion, min_num_samples_allowed,
@@ -39,6 +34,9 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, min_num_sampl
         print('*'*80)
         print('STARTING TRIAL #{}'.format(trial_number + 1))
         print()
+
+        # Resets the Monte Carlo caches for each tree trained.
+        monte_carlo.clean_caches()
 
         tree = decision_tree.DecisionTree(criterion=criterion,
                                           is_monte_carlo_criterion=use_monte_carlo,
@@ -138,7 +136,7 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
          missing_value_strings, min_num_samples_allowed, max_depth, num_trials, use_chi_sq_test,
          max_p_value_chi_sq, use_monte_carlo, use_random_ordering, upper_p_value_threshold,
          lower_p_value_threshold, prob_monte_carlo, output_csv_filepath,
-         output_split_char=OUTPUT_SPLIT_CHAR):
+         output_split_char=','):
     with open(output_csv_filepath, 'a') as fout:
         for dataset_number, filepath in enumerate(datasets_filepaths):
             if not os.path.exists(filepath) or not os.path.isfile(filepath):
@@ -203,106 +201,119 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
                                    fout,
                                    output_split_char)
 
+def init_datasets_info():
+    """Load information about every dataset available.
 
-if __name__ == '__main__':
-    DATASET_NAMES = []
-    DATASETS_FILEPATHS = []
-    KEY_ATTRIB_INDICES = []
-    CLASS_ATTRIB_INDICES = []
-    SPLIT_CHARS = []
-    MISSING_VALUE_STRINGS = []
+    Returns:
+        Tuple containing, in order:
+            - Name of each dataset;
+            - Filepath of each dataset;
+            - Key's attribute index in each dataset (may be `None`);
+            - Class' attribute index in each dataset (may be negative, indexing from the end);
+            - Character used to split csv entries in each dataset;
+            - String representing missing values in each dataset (may be `None`).
+    """
+    dataset_names = []
+    datasets_filepaths = []
+    key_attrib_indices = []
+    class_attrib_indices = []
+    split_chars = []
+    missing_value_strings = []
 
-    DATASET_BASE_PATH = os.path.join('.', 'datasets')
+    dataset_base_path = os.path.join('.', 'datasets')
 
     # Adult census income
-    DATASET_NAMES.append('Adult Census Income')
-    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+    dataset_names.append('Adult Census Income')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'adult census income',
                                            'adult_no_quotation_marks.csv'))
-    KEY_ATTRIB_INDICES.append(None)
-    CLASS_ATTRIB_INDICES.append(-1)
-    SPLIT_CHARS.append(',')
-    MISSING_VALUE_STRINGS.append('')
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append('')
 
     # Cars:
-    DATASET_NAMES.append('Cars')
-    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+    dataset_names.append('Cars')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'cars'
                                            'cars.csv'))
-    KEY_ATTRIB_INDICES.append(None)
-    CLASS_ATTRIB_INDICES.append(-1)
-    SPLIT_CHARS.append(',')
-    MISSING_VALUE_STRINGS.append(None)
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
 
     # Contraceptive:
-    DATASET_NAMES.append('Contraceptive')
-    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+    dataset_names.append('Contraceptive')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'contraceptive'
                                            'contraceptive.csv'))
-    KEY_ATTRIB_INDICES.append(None)
-    CLASS_ATTRIB_INDICES.append(-1)
-    SPLIT_CHARS.append(',')
-    MISSING_VALUE_STRINGS.append(None)
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
 
     # Mushroom
-    DATASET_NAMES.append('Mushroom')
-    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+    dataset_names.append('Mushroom')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'mushroom',
                                            'agaricus-lepiota.csv'))
-    KEY_ATTRIB_INDICES.append(None)
-    CLASS_ATTRIB_INDICES.append(0)
-    SPLIT_CHARS.append(',')
-    MISSING_VALUE_STRINGS.append('?')
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(0)
+    split_chars.append(',')
+    missing_value_strings.append('?')
 
     # Nursery:
-    DATASET_NAMES.append('Nursery')
-    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+    dataset_names.append('Nursery')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'nursery',
                                            'nursery.txt'))
-    KEY_ATTRIB_INDICES.append(None)
-    CLASS_ATTRIB_INDICES.append(-1)
-    SPLIT_CHARS.append(',')
-    MISSING_VALUE_STRINGS.append(None)
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
 
     # Poker Hand:
-    DATASET_NAMES.append('Poker Hand')
-    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+    dataset_names.append('Poker Hand')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'poker hand',
                                            'poker-hand-modified.csv'))
-    KEY_ATTRIB_INDICES.append(None)
-    CLASS_ATTRIB_INDICES.append(-1)
-    SPLIT_CHARS.append(',')
-    MISSING_VALUE_STRINGS.append(None)
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
 
     # Splice Junction:
-    DATASET_NAMES.append('Splice Junction')
-    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+    dataset_names.append('Splice Junction')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'splice junction'
                                            'splice-junction-modified.csv'))
-    KEY_ATTRIB_INDICES.append(1)
-    CLASS_ATTRIB_INDICES.append(0)
-    SPLIT_CHARS.append(',')
-    MISSING_VALUE_STRINGS.append(None)
+    key_attrib_indices.append(1)
+    class_attrib_indices.append(0)
+    split_chars.append(',')
+    missing_value_strings.append(None)
 
     # Titanic Survive:
-    DATASET_NAMES.append('Titanic Survive')
-    DATASETS_FILEPATHS.append(os.path.join(DATASET_BASE_PATH,
+    dataset_names.append('Titanic Survive')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'titanic',
                                            'titanicSurvive.csv'))
-    KEY_ATTRIB_INDICES.append(None)
-    CLASS_ATTRIB_INDICES.append(-1)
-    SPLIT_CHARS.append(',')
-    MISSING_VALUE_STRINGS.append(None)
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
 
+    return (dataset_names,
+            datasets_filepaths,
+            key_attrib_indices,
+            class_attrib_indices,
+            split_chars,
+            missing_value_strings)
 
-
-    OUTPUT_CSV_FILEPATH = os.path.join(
-        '.',
-        'outputs',
-        'multiple_levels_experiment_1.csv')
-
-    with open(OUTPUT_CSV_FILEPATH, 'a') as FOUT:
-        FIELDS_LIST = ['Date Time',
+def init_output_csv(output_csv_filepath, output_split_char=','):
+    """Writes the header to the CSV output file.
+    """
+    with open(output_csv_filepath, 'a') as fout:
+        fields_list = ['Date Time',
                        'Dataset',
                        'Total Number of Samples',
                        'Trial Number',
@@ -332,23 +343,45 @@ if __name__ == '__main__':
                        'Number of Samples Classified using Unkown Value',
 
                        'Average Number of Nodes Pruned']
-        print(OUTPUT_SPLIT_CHAR.join(FIELDS_LIST), file=FOUT)
-        FOUT.flush()
+        print(output_split_char.join(fields_list), file=fout)
+        fout.flush()
+
+
+if __name__ == '__main__':
+    # Datasets
+    (DATASET_NAMES,
+     DATASETS_FILEPATHS,
+     KEY_ATTRIB_INDICES,
+     CLASS_ATTRIB_INDICES,
+     SPLIT_CHARS,
+     MISSING_VALUE_STRINGS) = init_datasets_info()
+
+    # Output
+    OUTPUT_CSV_FILEPATH = os.path.join(
+        '.',
+        'outputs',
+        'multiple_levels_experiment_2.csv')
+    init_output_csv(OUTPUT_CSV_FILEPATH)
+
+    # Parameters configurations
+
+    # Minimum number of samples allowed in a TreeNode and still allowing it to split during training
+    MIN_NUM_SAMPLES_ALLOWED = 1
+    NUM_FOLDS = 10 # Number of folds to be used during cross-validation.
+    NUM_TRIALS = 5 # Number of experiments to be done with each parameters combination.
+
+    MAX_P_VALUE_CHI_SQ = [0.1]
+    MAX_DEPTH = [5]
 
     # (upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo)
     PARAMETERS_LIST = [(0.4, 0.1, 0.95),
                        (0.4, 0.1, 0.99),
                        (0.3, 0.1, 0.95),
                        (0.3, 0.1, 0.99)]
-
     USE_RANDOM = [False, True]
-    MAX_P_VALUE_CHI_SQ = [0.1]
-    MIN_NUM_SAMPLES_ALLOWED = [1]
-    MAX_DEPTH = [5]
 
-    for (curr_min_num_samples_allowed,
-         curr_max_depth) in itertools.product(MIN_NUM_SAMPLES_ALLOWED,
-                                              MAX_DEPTH):
+    # Experiments
+    for curr_max_depth in MAX_DEPTH:
         # Run without any bias treatment
         main(DATASET_NAMES,
              DATASETS_FILEPATHS,
@@ -356,7 +389,7 @@ if __name__ == '__main__':
              CLASS_ATTRIB_INDICES,
              SPLIT_CHARS,
              MISSING_VALUE_STRINGS,
-             curr_min_num_samples_allowed,
+             MIN_NUM_SAMPLES_ALLOWED,
              curr_max_depth,
              NUM_TRIALS,
              use_chi_sq_test=False,
@@ -367,7 +400,7 @@ if __name__ == '__main__':
              lower_p_value_threshold=None,
              prob_monte_carlo=None,
              output_csv_filepath=OUTPUT_CSV_FILEPATH)
-        # Run with Chi Square test
+        # Run with Chi Square test and minimum number of samples in second most frequent value
         for curr_max_p_value_chi_sq in MAX_P_VALUE_CHI_SQ:
             main(DATASET_NAMES,
                  DATASETS_FILEPATHS,
@@ -375,7 +408,7 @@ if __name__ == '__main__':
                  CLASS_ATTRIB_INDICES,
                  SPLIT_CHARS,
                  MISSING_VALUE_STRINGS,
-                 curr_min_num_samples_allowed,
+                 MIN_NUM_SAMPLES_ALLOWED,
                  curr_max_depth,
                  NUM_TRIALS,
                  use_chi_sq_test=True,
@@ -397,7 +430,7 @@ if __name__ == '__main__':
                  CLASS_ATTRIB_INDICES,
                  SPLIT_CHARS,
                  MISSING_VALUE_STRINGS,
-                 curr_min_num_samples_allowed,
+                 MIN_NUM_SAMPLES_ALLOWED,
                  curr_max_depth,
                  NUM_TRIALS,
                  use_chi_sq_test=False,

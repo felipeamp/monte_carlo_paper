@@ -15,11 +15,19 @@ import numpy as np
 from scipy.special import binom as binom_coef
 from scipy.stats import binom as binom_stats
 
-
+#: Cache where, given (upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo,
+#: num_valid_attributes), returns returns (num_tests, num_fails_allowed).
+_MONTE_CARLO_T_F_CACHE = {}
+#: Cache where, given (num_tests, num_fails_allowed), returns a list where the m-th entry has the
+# value of expected number of total tests when there are m valid nominal attributes.
 _MONTE_CARLO_EXPECTED_CACHE = defaultdict(list)
-    # receives (t, f), returns a list where the m-th entry has the value of E when there are m valid
-    # nominal attributes.
-_MONTE_CARLO_T_F_CACHE = {} # receives (U, L, p, m), returns (t, f_allowed)
+
+
+def clean_caches():
+    """Cleans `_MONTE_CARLO_T_F_CACHE` and `_MONTE_CARLO_EXPECTED_CACHE`.
+    """
+    _MONTE_CARLO_T_F_CACHE = {}
+    _MONTE_CARLO_EXPECTED_CACHE = defaultdict(list)
 
 
 def get_tests_and_fails_allowed(upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo,

@@ -59,6 +59,7 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_training_
     time_taken_num_tests_fails_list = []
     time_taken_expected_tests_list = []
 
+    trivial_accuracy_list = []
     accuracy_with_missing_values_list = []
     accuracy_without_missing_values_list = []
     num_samples_missing_values_list = []
@@ -150,6 +151,7 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_training_
         num_nodes_pruned_list.append(num_nodes_prunned)
 
         # Time to test this tree's classification and save the classification information
+        trivial_accuracy_list.append(tree.get_trivial_accuracy(curr_test_samples_indices))
         (_,
          num_correct_classifications_w_unkown,
          num_correct_classifications_wo_unkown,
@@ -180,6 +182,7 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, num_training_
                    np.array(time_taken_tree_list), np.array(time_taken_prunning_list),
                    np.array(time_taken_num_tests_fails_list),
                    np.array(time_taken_expected_tests_list),
+                   np.array(trivial_accuracy_list),
                    np.array(accuracy_with_missing_values_list),
                    np.array(accuracy_without_missing_values_list),
                    np.array(num_samples_missing_values_list), np.array(num_nodes_pruned_list),
@@ -194,9 +197,9 @@ def save_fold_info(dataset_name, num_total_samples, num_training_samples, num_tr
                    accepted_position_array, num_times_accepted, total_time_taken_array,
                    time_taken_tree_array, time_taken_prunning_array,
                    time_taken_num_tests_fails_array, time_taken_expected_tests_array,
-                   accuracy_with_missing_values_array, accuracy_without_missing_values_array,
-                   num_samples_missing_values_array, num_nodes_pruned_array, output_split_char,
-                   output_file_descriptor):
+                   trivial_accuracy_array, accuracy_with_missing_values_array,
+                   accuracy_without_missing_values_array, num_samples_missing_values_array,
+                   num_nodes_pruned_array, output_split_char, output_file_descriptor):
     """Saves the experiment information in the CSV file.
     """
     assert num_trials > 0
@@ -260,6 +263,7 @@ def save_fold_info(dataset_name, num_total_samples, num_training_samples, num_tr
                   str(np.mean(time_taken_num_tests_fails_array)),
                   str(np.mean(time_taken_expected_tests_array)),
 
+                  str(np.mean(trivial_accuracy_array)),
                   str(np.mean(accuracy_with_missing_values_array))]
 
     if len(accuracy_without_missing_values_array) > 0:
@@ -508,6 +512,8 @@ def init_output_csv(output_csv_filepath, output_split_char=','):
                        'Average Time Taken to Calculate t and f [s]',
                        'Average Time Taken to Calculate E [s]',
 
+                       'Average Accuracy Percentage on Trivial Tree (with no splits)',
+
                        'Average Accuracy Percentage (with missing values)',
                        'Average Accuracy Percentage (without missing values)',
                        'Average Number of Samples with Unkown Values for Accepted Attribute',
@@ -530,14 +536,14 @@ if __name__ == '__main__':
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
         'outputs',
-        'single_level_experiment_2.csv')
+        'single_level_experiment_1.csv')
     init_output_csv(OUTPUT_CSV_FILEPATH)
 
     # Parameters configurations
 
     # Minimum number of samples allowed in a TreeNode and still allowing it to split during training
     MIN_NUM_SAMPLES_ALLOWED = 1
-    NUM_TRIALS = 30 # Number of experiments to be done with each parameters combination.
+    NUM_TRIALS = 5 # Number of experiments to be done with each parameters combination.
 
     # (upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo)
     PARAMETERS_LIST = [(0.4, 0.1, 0.95),

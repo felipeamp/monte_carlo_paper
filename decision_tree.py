@@ -19,6 +19,10 @@ import monte_carlo
 #: Minimum number of samples needed in the two most frequent values of an attribute such that it is
 #: considered valid.
 MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE = 40
+
+#: Use the minimum number of samples in the two most frequent classes as a criteria to allow a split
+#: or not.
+USE_MIN_SAMPLES_SECOND_LARGEST_CLASS = True
 #: Minimum number of samples needed in the two most frequent classes such that this node can be
 #: split.
 MIN_SAMPLES_SECOND_LARGEST_CLASS = 40
@@ -70,6 +74,15 @@ class DecisionTree(object):
         """Returns the total time taken to calculate the total expected number of tests at each node
         in the tree."""
         return self._root_node.get_subtree_time_expected_tests()
+
+    def get_trivial_accuracy(self, test_samples_indices):
+        """Returns the accuracy obtained by classifying all test samples in the most common class
+        among training samples. Must be called after training the tree.
+        """
+        num_correct = sum(
+            self._dataset.sample_class[curr_sample_index] == self._root_node.most_common_int_class
+            for curr_sample_index in test_samples_indices)
+        return 100.0 * num_correct / len(test_samples_indices)
 
     def _classify_sample(self, sample, sample_key):
         if self._root_node is None:
@@ -344,7 +357,9 @@ class DecisionTree(object):
                 - list containing the number of nodes prunned in each fold;
                 - list containing the maximum tree depth for each fold;
                 - list containing the number of nodes per fold, after prunning;
-                - list containing the number of valid attributes in root node in each fold.
+                - list containing the number of valid attributes in root node in each fold;
+                - Accuracy percentage obtained by classifying, in each fold, the test samples in the
+                most common class among training samples.
         """
 
         classifications = [0] * dataset.num_samples
@@ -360,6 +375,7 @@ class DecisionTree(object):
         num_valid_attributes_in_root = []
         time_taken_prunning_per_fold = []
         num_nodes_prunned_per_fold = []
+        num_correct_trivial_classifications = 0
 
         fold_count = 0
 
@@ -403,7 +419,6 @@ class DecisionTree(object):
                                                                min_samples_per_node,
                                                                use_stop_conditions,
                                                                max_p_value_chi_sq)
-
                 max_depth_per_fold.append(curr_max_depth)
                 num_nodes_per_fold.append(self.get_root_node().get_num_nodes())
                 num_valid_attributes_in_root.append(
@@ -419,6 +434,9 @@ class DecisionTree(object):
                 total_cost += curr_total_cost
                 total_cost_wo_unkown += curr_total_cost_wo_unkown
                 num_unkown += curr_num_unkown
+                num_correct_trivial_classifications += round(
+                    len(validation_sample_indices) *
+                    (self.get_trivial_accuracy(validation_sample_indices) / 100.0))
 
                 fold_count += 1
                 time_taken_prunning_per_fold.append(curr_time_taken_prunning)
@@ -451,7 +469,6 @@ class DecisionTree(object):
                                                                min_samples_per_node,
                                                                use_stop_conditions,
                                                                max_p_value_chi_sq)
-
                 max_depth_per_fold.append(curr_max_depth)
                 num_nodes_per_fold.append(self.get_root_node().get_num_nodes())
                 num_valid_attributes_in_root.append(
@@ -467,6 +484,9 @@ class DecisionTree(object):
                 total_cost += curr_total_cost
                 total_cost_wo_unkown += curr_total_cost_wo_unkown
                 num_unkown += curr_num_unkown
+                num_correct_trivial_classifications += round(
+                    len(validation_sample_indices) *
+                    (self.get_trivial_accuracy(validation_sample_indices) / 100.0))
 
                 fold_count += 1
                 time_taken_prunning_per_fold.append(curr_time_taken_prunning)
@@ -490,7 +510,8 @@ class DecisionTree(object):
                  num_nodes_prunned_per_fold,
                  max_depth_per_fold,
                  num_nodes_per_fold,
-                 num_valid_attributes_in_root)
+                 num_valid_attributes_in_root,
+                 100.0 * num_correct_trivial_classifications / dataset.num_samples)
 
     def test(self, test_sample_indices):
         """Tests the (already trained) tree over samples from the same dataset as the
@@ -900,8 +921,10 @@ class TreeNode(object):
         if (self.max_depth_remaining <= 0
                 or self.num_valid_samples < self._min_samples_per_node
                 or self.number_non_empty_classes == 1
-                or _has_enough_samples_in_second_largest_class(self.class_index_num_samples,
-                                                               self.most_common_int_class)):
+                or (USE_MIN_SAMPLES_SECOND_LARGEST_CLASS
+                    and not _has_enough_samples_in_second_largest_class(
+                        self.class_index_num_samples,
+                        self.most_common_int_class))):
             return None
 
         # If a valid attribute has only one value, it should be marked as invalid from this node on.
@@ -1031,7 +1054,6 @@ class TreeNode(object):
                                        self.lower_p_value_threshold,
                                        self.prob_monte_carlo,
                                        self.calculate_expected_tests))
-
             self.nodes[-1].create_subtree(criterion)
 
     def get_most_popular_subtree(self):

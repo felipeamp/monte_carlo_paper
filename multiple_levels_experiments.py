@@ -57,7 +57,8 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, min_num_sampl
          num_nodes_prunned_per_fold,
          max_depth_per_fold,
          num_nodes_per_fold,
-         num_valid_attributes_in_root) = tree.cross_validate(
+         num_valid_attributes_in_root,
+         trivial_accuracy_percentage) = tree.cross_validate(
              dataset=train_dataset,
              num_folds=NUM_FOLDS,
              max_depth=max_depth,
@@ -82,8 +83,8 @@ def monte_carlo_experiment(dataset_name, train_dataset, criterion, min_num_sampl
                         use_monte_carlo, criteria.ORDER_RANDOMLY, upper_p_value_threshold,
                         lower_p_value_threshold, prob_monte_carlo,
                         np.mean(num_valid_attributes_in_root), np.mean(num_nodes_per_fold),
-                        np.mean(max_depth_per_fold), total_time_taken, accuracy_with_missing_values,
-                        accuracy_without_missing_values, num_unkown,
+                        np.mean(max_depth_per_fold), total_time_taken, trivial_accuracy_percentage,
+                        accuracy_with_missing_values, accuracy_without_missing_values, num_unkown,
                         np.mean(num_nodes_prunned_per_fold), output_split_char,
                         output_file_descriptor)
 
@@ -92,9 +93,9 @@ def save_trial_info(dataset_name, num_total_samples, trial_number, criterion_nam
                     min_num_samples_allowed, max_depth, use_chi_sq_test, max_p_value_chi_sq,
                     use_monte_carlo, is_random_ordering, upper_p_value_threshold,
                     lower_p_value_threshold, prob_monte_carlo, avg_num_valid_attributes_in_root,
-                    avg_num_nodes, avg_tree_depth, total_time_taken, accuracy_with_missing_values,
-                    accuracy_without_missing_values, num_unkown, avg_num_nodes_pruned,
-                    output_split_char, output_file_descriptor):
+                    avg_num_nodes, avg_tree_depth, total_time_taken, trivial_accuracy_percentage,
+                    accuracy_with_missing_values, accuracy_without_missing_values, num_unkown,
+                    avg_num_nodes_pruned, output_split_char, output_file_descriptor):
     """Saves the experiment information in the CSV file.
     """
     line_list = [str(datetime.datetime.now()),
@@ -122,6 +123,7 @@ def save_trial_info(dataset_name, num_total_samples, trial_number, criterion_nam
 
                  str(total_time_taken),
 
+                 str(trivial_accuracy_percentage),
                  str(accuracy_with_missing_values),
                  str(accuracy_without_missing_values),
                  str(num_unkown),
@@ -338,6 +340,8 @@ def init_output_csv(output_csv_filepath, output_split_char=','):
 
                        'Total Time Taken for Cross-Validation [s]',
 
+                       'Accuracy Percentage on Trivial Trees (with no splits)',
+
                        'Accuracy Percentage (with missing values)',
                        'Accuracy Percentage (without missing values)',
                        'Number of Samples Classified using Unkown Value',
@@ -360,7 +364,7 @@ if __name__ == '__main__':
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
         'outputs',
-        'multiple_levels_experiment_2.csv')
+        'multiple_levels_experiment_1.csv')
     init_output_csv(OUTPUT_CSV_FILEPATH)
 
     # Parameters configurations

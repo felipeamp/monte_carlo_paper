@@ -92,9 +92,9 @@ class GiniGain(Criterion):
                 ret.append(best_attrib_split)
             return ret
 
-        # Instead of minimizing the difference between the Gini Index in the current
-        # TreeNode minus the weighted Gini Index of its child TreeNode's, we just maximize
-        # the weighted Gini Index of its children.
+
+        original_gini = cls._calculate_gini_index(len(tree_node.valid_samples_indices),
+                                                  tree_node.class_index_num_samples)
         best_splits_per_attrib = []
         has_exactly_two_classes = tree_node.number_non_empty_classes == 2
         cache_values_seen = []
@@ -116,9 +116,10 @@ class GiniGain(Criterion):
                     print("It will be skipped!")
                     continue
                 if has_exactly_two_classes:
-                    (curr_total_gini_index,
+                    (curr_total_gini_gain,
                      left_values,
                      right_values) = cls._two_class_trick(
+                         original_gini,
                          tree_node.class_index_num_samples,
                          values_seen,
                          tree_node.contingency_tables[attrib_index][1],
@@ -126,9 +127,9 @@ class GiniGain(Criterion):
                          len(tree_node.valid_samples_indices))
                     best_splits_per_attrib.append((attrib_index
                                                    [left_values, right_values],
-                                                   curr_total_gini_index))
+                                                   curr_total_gini_gain))
                 else:
-                    best_total_gini_index = float('-inf')
+                    best_total_gini_gain = float('-inf')
                     best_left_values = set()
                     best_right_values = set()
                     for (left_values,
@@ -141,22 +142,23 @@ class GiniGain(Criterion):
                              values_seen,
                              tree_node.contingency_tables[attrib_index][0],
                              tree_node.dataset.num_classes):
-                        curr_total_gini_index = cls._calculate_total_gini_index(
+                        curr_children_gini_index = cls._calculate_children_gini_index(
                             left_num,
                             class_num_left,
                             right_num,
                             class_num_right)
-                        if curr_total_gini_index > best_total_gini_index:
-                            best_total_gini_index = curr_total_gini_index
+                        curr_total_gini_gain = original_gini - curr_children_gini_index
+                        if curr_total_gini_gain > best_total_gini_gain:
+                            best_total_gini_gain = curr_total_gini_gain
                             best_left_values = left_values
                             best_right_values = right_values
                     best_splits_per_attrib.append((attrib_index,
                                                    [best_left_values,
                                                     best_right_values],
-                                                   best_total_gini_index))
-        if num_tests == 0: # Just return attribute/split with maximum criterion value.
+                                                   best_total_gini_gain))
+        if num_tests == 0: # Just return attribute/split with maximum Gini Gain.
             max_criterion_value = float('-inf')
-            best_attribute_and_split = (None, [], float('-inf'))
+            best_attribute_and_split = (None, [], float('inf'))
             for best_attrib_split in best_splits_per_attrib:
                 criterion_value = best_attrib_split[2]
                 if criterion_value > max_criterion_value:
@@ -181,6 +183,7 @@ class GiniGain(Criterion):
                 attrib_index, _, criterion_value = best_attrib_split
                 (should_accept,
                  num_tests_needed) = cls._accept_attribute(
+                     original_gini,
                      criterion_value,
                      num_tests,
                      num_fails_allowed,
@@ -203,7 +206,7 @@ class GiniGain(Criterion):
         return values_seen
 
     @staticmethod
-    def _two_class_trick(class_index_num_samples, values_seen, values_num_samples,
+    def _two_class_trick(original_gini, class_index_num_samples, values_seen, values_num_samples,
                          contingency_table, num_total_valid_samples):
         # TESTED!
         def _get_non_empty_class_indices(class_index_num_samples):
@@ -233,8 +236,8 @@ class GiniGain(Criterion):
             value_number_ratio.sort(key=lambda tup: tup[2])
             return value_number_ratio
 
-        def _calculate_gini_index(num_left_first, num_left_second, num_right_first,
-                                  num_right_second, num_left_samples, num_right_samples):
+        def _calculate_children_gini_index(num_left_first, num_left_second, num_right_first,
+                                           num_right_second, num_left_samples, num_right_samples):
             # TESTED!
             if num_left_samples != 0:
                 left_first_class_freq_ratio = float(num_left_first)/float(num_left_samples)
@@ -244,7 +247,7 @@ class GiniGain(Criterion):
                                          - left_second_class_freq_ratio**2)
             else:
                 # We can set left_split_gini_index to any value here, since it will be multiplied
-                # by zero in curr_total_gini_index
+                # by zero in curr_children_gini_index
                 left_split_gini_index = 1.0
 
             if num_right_samples != 0:
@@ -255,12 +258,13 @@ class GiniGain(Criterion):
                                           - right_second_class_freq_ratio**2)
             else:
                 # We can set right_split_gini_index to any value here, since it will be multiplied
-                # by zero in curr_total_gini_index
+                # by zero in curr_children_gini_index
                 right_split_gini_index = 1.0
 
-            curr_total_gini_index = (num_left_samples * left_split_gini_index
-                                     + num_right_samples * right_split_gini_index)
-            return curr_total_gini_index
+            curr_children_gini_index = ((num_left_samples * left_split_gini_index
+                                         + num_right_samples * right_split_gini_index)
+                                        / (num_left_samples + num_right_samples))
+            return curr_children_gini_index
 
         # We only need to sort values by the percentage of samples in second non-empty class with
         # this value. The best split will be given by choosing an index to split this list of
@@ -273,10 +277,7 @@ class GiniGain(Criterion):
                                                           (first_non_empty_class,
                                                            second_non_empty_class))
 
-        # Since total_gini_index above is always non-negative and <= 2 (because gini_index is
-        # always non-negative and <= 1.0), the starting value below will be replaced in the for
-        # loop.
-        best_split_total_gini_index = float('inf') # > 2.0
+        best_split_total_gini_gain = float('-inf')
         best_last_left_index = 0
 
         num_left_first = 0
@@ -301,21 +302,22 @@ class GiniGain(Criterion):
             num_right_first -= last_left_num_first
             num_right_second -= last_left_num_second
 
-            curr_total_gini_index = _calculate_gini_index(num_left_first,
-                                                          num_left_second,
-                                                          num_right_first,
-                                                          num_right_second,
-                                                          num_left_samples,
-                                                          num_right_samples)
-            if curr_total_gini_index < best_split_total_gini_index:
-                best_split_total_gini_index = curr_total_gini_index
+            curr_children_gini_index = _calculate_children_gini_index(num_left_first,
+                                                                      num_left_second,
+                                                                      num_right_first,
+                                                                      num_right_second,
+                                                                      num_left_samples,
+                                                                      num_right_samples)
+            curr_total_gini_gain = original_gini - curr_children_gini_index
+            if curr_total_gini_gain > best_split_total_gini_gain:
+                best_split_total_gini_gain = curr_total_gini_gain
                 best_last_left_index = last_left_index
 
         # Let's get the values and split the indices corresponding to the best split found.
         set_left_values = set([tup[0] for tup in value_number_ratio[:best_last_left_index + 1]])
         set_right_values = set(values_seen) - set_left_values
 
-        return (best_split_total_gini_index, set_left_values, set_right_values)
+        return (best_split_total_gini_gain, set_left_values, set_right_values)
 
     @staticmethod
     def _generate_possible_splits(values_num_samples, values_seen, contingency_table,
@@ -357,11 +359,13 @@ class GiniGain(Criterion):
         return gini_index
 
     @classmethod
-    def _calculate_total_gini_index(cls, left_num, class_num_left, right_num, class_num_right):
+    def _calculate_children_gini_index(cls, left_num, class_num_left, right_num, class_num_right):
         left_split_gini_index = cls._calculate_gini_index(left_num, class_num_left)
         right_split_gini_index = cls._calculate_gini_index(right_num, class_num_right)
-        total_gini_index = left_num * left_split_gini_index + right_num * right_split_gini_index
-        return total_gini_index
+        children_gini_index = ((left_num * left_split_gini_index
+                                + right_num * right_split_gini_index)
+                               / (left_num + right_num))
+        return children_gini_index
 
     @staticmethod
     def _generate_random_contingency_table(classes_dist, num_valid_samples, values_num_samples):
@@ -381,9 +385,9 @@ class GiniGain(Criterion):
         return random_contingency_table
 
     @classmethod
-    def _accept_attribute(cls, real_gini, num_tests, num_fails_allowed, num_valid_samples,
-                          class_index_num_samples, values_num_samples, has_exactly_two_classes,
-                          values_seen):
+    def _accept_attribute(cls, original_gini, real_gini_gain, num_tests, num_fails_allowed,
+                          num_valid_samples, class_index_num_samples, values_num_samples,
+                          has_exactly_two_classes, values_seen):
         num_classes = len(class_index_num_samples)
         classes_dist = class_index_num_samples[:]
         for class_index in range(num_classes):
@@ -397,14 +401,15 @@ class GiniGain(Criterion):
                 values_num_samples)
 
             if has_exactly_two_classes:
-                (best_gini_found, _, _) = cls._two_class_trick(
+                (best_gini_gain_found, _, _) = cls._two_class_trick(
+                    original_gini,
                     class_index_num_samples,
                     values_seen,
                     values_num_samples,
                     random_contingency_table,
                     num_valid_samples)
             else:
-                best_gini_found = float('-inf')
+                best_gini_gain_found = float('inf')
                 for (_, _, left_num,
                      class_num_left,
                      right_num,
@@ -413,15 +418,16 @@ class GiniGain(Criterion):
                          values_seen,
                          random_contingency_table,
                          num_classes):
-                    curr_total_gini_index = cls._calculate_total_gini_index(
+                    curr_children_gini_index = cls._calculate_children_gini_index(
                         left_num,
                         class_num_left,
                         right_num,
                         class_num_right)
-                    if curr_total_gini_index < best_gini_found:
-                        best_gini_found = curr_total_gini_index
+                    curr_total_gini_gain = original_gini - curr_children_gini_index
+                    if curr_total_gini_gain > best_gini_gain_found:
+                        best_gini_gain_found = curr_total_gini_gain
 
-            if best_gini_found > real_gini:
+            if best_gini_gain_found > real_gini_gain:
                 num_fails_seen += 1
                 if num_fails_seen > num_fails_allowed:
                     return False, test_number
@@ -483,7 +489,7 @@ class Twoing(Criterion):
                 cache_values_seen.append(None)
                 continue
             else:
-                best_total_gini_index = float('-inf')
+                best_total_gini_gain = float('-inf')
                 best_left_values = set()
                 best_right_values = set()
                 values_seen = cls._get_values_seen(
@@ -497,25 +503,24 @@ class Twoing(Criterion):
                          tree_node.contingency_tables[attrib_index][1],
                          set_left_classes,
                          set_right_classes)
-                    (curr_total_gini_index,
+                    original_gini = cls._calculate_gini_index(len(tree_node.valid_samples_indices),
+                                                              superclass_index_num_samples)
+                    (curr_gini_gain,
                      left_values,
                      right_values) = cls._two_class_trick(
+                         original_gini,
                          superclass_index_num_samples,
                          values_seen,
                          tree_node.contingency_tables[attrib_index][1],
                          twoing_contingency_table,
                          len(tree_node.valid_samples_indices))
-                    original_gini = cls._calculate_gini_index(len(tree_node.valid_samples_indices),
-                                                              superclass_index_num_samples)
-                    curr_gini = (original_gini
-                                 - curr_total_gini_index/len(tree_node.valid_samples_indices))
-                    if curr_gini > best_total_gini_index:
-                        best_total_gini_index = curr_gini
+                    if curr_gini_gain > best_total_gini_gain:
+                        best_total_gini_gain = curr_gini_gain
                         best_left_values = left_values
                         best_right_values = right_values
                 best_splits_per_attrib.append((attrib_index,
                                                [best_left_values, best_right_values],
-                                               best_total_gini_index))
+                                               best_total_gini_gain))
         if num_tests == 0: # Just return attribute/split with maximum criterion value.
             max_criterion_value = float('-inf')
             best_attribute_and_split = (None, [], float('-inf'))
@@ -576,7 +581,7 @@ class Twoing(Criterion):
 
         for left_classes in itertools.chain.from_iterable(
                 itertools.combinations(non_empty_classes, size_left_superclass)
-                for size_left_superclass in range(1, number_non_empty_classes//2 + 1)):
+                for size_left_superclass in range(1, number_non_empty_classes // 2 + 1)):
             set_left_classes = set(left_classes)
             set_right_classes = non_empty_classes - set_left_classes
             if len(set_left_classes) == 0 or len(set_right_classes) == 0:
@@ -601,7 +606,7 @@ class Twoing(Criterion):
         return twoing_contingency_table, superclass_index_num_samples
 
     @staticmethod
-    def _two_class_trick(class_index_num_samples, values_seen, values_num_samples,
+    def _two_class_trick(original_gini, class_index_num_samples, values_seen, values_num_samples,
                          contingency_table, num_total_valid_samples):
         # TESTED!
         def _get_non_empty_class_indices(class_index_num_samples):
@@ -630,8 +635,8 @@ class Twoing(Criterion):
             value_number_ratio.sort(key=lambda tup: tup[2])
             return value_number_ratio
 
-        def _calculate_gini_index(num_left_first, num_left_second, num_right_first,
-                                  num_right_second, num_left_samples, num_right_samples):
+        def _calculate_children_gini_index(num_left_first, num_left_second, num_right_first,
+                                           num_right_second, num_left_samples, num_right_samples):
             # TESTED!
             if num_left_samples != 0:
                 left_first_class_freq_ratio = float(num_left_first)/float(num_left_samples)
@@ -641,7 +646,7 @@ class Twoing(Criterion):
                                          - left_second_class_freq_ratio**2)
             else:
                 # We can set left_split_gini_index to any value here, since it will be multiplied
-                # by zero in curr_total_gini_index
+                # by zero in curr_children_gini_index
                 left_split_gini_index = 1.0
 
             if num_right_samples != 0:
@@ -652,12 +657,13 @@ class Twoing(Criterion):
                                           - right_second_class_freq_ratio**2)
             else:
                 # We can set right_split_gini_index to any value here, since it will be multiplied
-                # by zero in curr_total_gini_index
+                # by zero in curr_children_gini_index
                 right_split_gini_index = 1.0
 
-            curr_total_gini_index = (num_left_samples * left_split_gini_index
-                                     + num_right_samples * right_split_gini_index)
-            return curr_total_gini_index
+            curr_children_gini_index = ((num_left_samples * left_split_gini_index
+                                         + num_right_samples * right_split_gini_index)
+                                        / (num_left_samples + num_right_samples))
+            return curr_children_gini_index
 
         # We only need to sort values by the percentage of samples in second non-empty class with
         # this value. The best split will be given by choosing an index to split this list of
@@ -673,7 +679,7 @@ class Twoing(Criterion):
                                                           (first_non_empty_class,
                                                            second_non_empty_class))
 
-        best_split_total_gini_index = float('inf')
+        best_split_total_gini_gain = float('-inf')
         best_last_left_index = 0
 
         num_left_first = 0
@@ -698,21 +704,22 @@ class Twoing(Criterion):
             num_right_first -= last_left_num_first
             num_right_second -= last_left_num_second
 
-            curr_total_gini_index = _calculate_gini_index(num_left_first,
-                                                          num_left_second,
-                                                          num_right_first,
-                                                          num_right_second,
-                                                          num_left_samples,
-                                                          num_right_samples)
-            if curr_total_gini_index < best_split_total_gini_index:
-                best_split_total_gini_index = curr_total_gini_index
+            curr_children_gini_index = _calculate_children_gini_index(num_left_first,
+                                                                      num_left_second,
+                                                                      num_right_first,
+                                                                      num_right_second,
+                                                                      num_left_samples,
+                                                                      num_right_samples)
+            curr_gini_gain = original_gini - curr_children_gini_index
+            if curr_gini_gain > best_split_total_gini_gain:
+                best_split_total_gini_gain = curr_gini_gain
                 best_last_left_index = last_left_index
 
         # Let's get the values and split the indices corresponding to the best split found.
         set_left_values = set([tup[0] for tup in value_number_ratio[:best_last_left_index + 1]])
         set_right_values = set(values_seen) - set_left_values
 
-        return (best_split_total_gini_index, set_left_values, set_right_values)
+        return (best_split_total_gini_gain, set_left_values, set_right_values)
 
     @staticmethod
     def _calculate_gini_index(side_num, class_num_side):
@@ -723,11 +730,13 @@ class Twoing(Criterion):
         return gini_index
 
     @classmethod
-    def _calculate_total_gini_index(cls, left_num, class_num_left, right_num, class_num_right):
+    def _calculate_children_gini_index(cls, left_num, class_num_left, right_num, class_num_right):
         left_split_gini_index = cls._calculate_gini_index(left_num, class_num_left)
         right_split_gini_index = cls._calculate_gini_index(right_num, class_num_right)
-        total_gini_index = left_num * left_split_gini_index + right_num * right_split_gini_index
-        return total_gini_index
+        children_gini_index = ((left_num * left_split_gini_index
+                                + right_num * right_split_gini_index)
+                               / (left_num + right_num))
+        return children_gini_index
 
     @staticmethod
     def _generate_random_contingency_table(classes_dist, num_valid_samples, values_num_samples):
@@ -747,7 +756,7 @@ class Twoing(Criterion):
         return random_contingency_table
 
     @classmethod
-    def _accept_attribute(cls, real_gini, num_tests, num_fails_allowed, num_valid_samples,
+    def _accept_attribute(cls, real_gini_gain, num_tests, num_fails_allowed, num_valid_samples,
                           class_index_num_samples, values_num_samples, values_seen):
         num_classes = len(class_index_num_samples)
         classes_dist = class_index_num_samples[:]
@@ -761,7 +770,7 @@ class Twoing(Criterion):
                 num_valid_samples,
                 values_num_samples)
 
-            best_gini_found = float('-inf')
+            best_gini_gain = float('-inf')
             for (set_left_classes,
                  set_right_classes) in cls._generate_twoing(class_index_num_samples):
 
@@ -771,19 +780,18 @@ class Twoing(Criterion):
                      values_num_samples,
                      set_left_classes,
                      set_right_classes)
-                (curr_total_gini_index, _, _) = cls._two_class_trick(superclass_index_num_samples,
-                                                                     values_seen,
-                                                                     values_num_samples,
-                                                                     twoing_contingency_table,
-                                                                     num_valid_samples)
                 original_gini = cls._calculate_gini_index(num_valid_samples,
                                                           superclass_index_num_samples)
-                curr_gini = (original_gini
-                             - curr_total_gini_index / num_valid_samples)
-                if curr_gini > best_gini_found:
-                    best_gini_found = curr_gini
+                (curr_gini_gain, _, _) = cls._two_class_trick(original_gini,
+                                                              superclass_index_num_samples,
+                                                              values_seen,
+                                                              values_num_samples,
+                                                              twoing_contingency_table,
+                                                              num_valid_samples)
+                if curr_gini_gain > best_gini_gain:
+                    best_gini_gain = curr_gini_gain
 
-            if best_gini_found > real_gini:
+            if best_gini_gain > real_gini_gain:
                 num_fails_seen += 1
                 if num_fails_seen > num_fails_allowed:
                     return False, test_number
@@ -828,7 +836,7 @@ class GainRatio(Criterion):
                 criterion value.
         """
 
-        #First we calculate the original class frequency and information
+        # First we calculate the original class frequency and information
         original_information = cls._calculate_information(tree_node.class_index_num_samples,
                                                           len(tree_node.valid_samples_indices))
         best_splits_per_attrib = []
@@ -844,6 +852,7 @@ class GainRatio(Criterion):
                 best_splits_per_attrib.append((attrib_index,
                                                splits_values,
                                                curr_gain_ratio))
+
         if num_tests == 0: # Just return attribute/split with maximum criterion value.
             max_criterion_value = float('-inf')
             best_attribute_and_split = (None, [], float('-inf'))
@@ -873,8 +882,7 @@ class GainRatio(Criterion):
                      num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[attrib_index][1],
-                     original_information)
+                     tree_node.contingency_tables[attrib_index][1])
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
                     return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
@@ -891,25 +899,28 @@ class GainRatio(Criterion):
     @classmethod
     def _calculate_gain_ratio(cls, num_valid_samples, contingency_table, values_num_samples,
                               original_information):
-        information_gain = original_information # Initial information Gain
+        information_gain = original_information # Initial Information Gain
         for value, value_num_samples in enumerate(values_num_samples):
             if value_num_samples == 0:
                 continue
             curr_split_information = cls._calculate_information(contingency_table[value],
                                                                 value_num_samples)
-            information_gain -= (value_num_samples/num_valid_samples) * curr_split_information
+            information_gain -= (value_num_samples / num_valid_samples) * curr_split_information
+
         # Gain Ratio
         potential_partition_information = cls._calculate_potential_information(values_num_samples,
                                                                                num_valid_samples)
+        # Note that, since there are at least two different values, potential_partition_information
+        # is never zero.
         gain_ratio = information_gain / potential_partition_information
         return gain_ratio
 
     @staticmethod
-    def _calculate_information(value_class_num_samples, value_num_samples):
+    def _calculate_information(class_index_num_samples, num_valid_samples):
         information = 0.0
-        for curr_class_num_samples in value_class_num_samples:
+        for curr_class_num_samples in class_index_num_samples:
             if curr_class_num_samples != 0:
-                curr_frequency = curr_class_num_samples / value_num_samples
+                curr_frequency = curr_class_num_samples / num_valid_samples
                 information -= curr_frequency * math.log2(curr_frequency)
         return information
 
@@ -942,7 +953,7 @@ class GainRatio(Criterion):
 
     @classmethod
     def _accept_attribute(cls, real_gain_ratio, num_tests, num_fails_allowed, num_valid_samples,
-                          class_index_num_samples, values_num_samples, original_information):
+                          class_index_num_samples, values_num_samples):
         num_classes = len(class_index_num_samples)
         classes_dist = class_index_num_samples[:]
         for class_index in range(num_classes):
@@ -954,6 +965,10 @@ class GainRatio(Criterion):
                 classes_dist,
                 num_valid_samples,
                 values_num_samples)
+            new_class_index_num_samples = np.sum(random_contingency_table, axis=0).tolist()
+
+            original_information = cls._calculate_information(new_class_index_num_samples,
+                                                              num_valid_samples)
             curr_gain_ratio = cls._calculate_gain_ratio(
                 num_valid_samples,
                 random_contingency_table,

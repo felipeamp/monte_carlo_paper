@@ -469,7 +469,7 @@ def init_datasets_info():
     dataset_names.append('Mushroom')
     datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'mushroom',
-                                           'agaricus-lepiota.csv'))
+                                           'mushroom.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(0)
     split_chars.append(',')

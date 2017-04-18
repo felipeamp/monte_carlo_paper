@@ -158,7 +158,7 @@ class GiniGain(Criterion):
                                                    best_total_gini_gain))
         if num_tests == 0: # Just return attribute/split with maximum Gini Gain.
             max_criterion_value = float('-inf')
-            best_attribute_and_split = (None, [], float('inf'))
+            best_attribute_and_split = (None, [], float('-inf'))
             for best_attrib_split in best_splits_per_attrib:
                 criterion_value = best_attrib_split[2]
                 if criterion_value > max_criterion_value:
@@ -409,7 +409,7 @@ class GiniGain(Criterion):
                     random_contingency_table,
                     num_valid_samples)
             else:
-                best_gini_gain_found = float('inf')
+                best_gini_gain_found = float('-inf')
                 for (_, _, left_num,
                      class_num_left,
                      right_num,
@@ -671,7 +671,7 @@ class Twoing(Criterion):
         (first_non_empty_class,
          second_non_empty_class) = _get_non_empty_class_indices(class_index_num_samples)
         if first_non_empty_class is None or second_non_empty_class is None:
-            return (float('inf'), {0}, set())
+            return (float('-inf'), {0}, set())
 
         value_number_ratio = _calculate_value_class_ratio(values_seen,
                                                           values_num_samples,

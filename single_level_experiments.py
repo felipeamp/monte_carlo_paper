@@ -513,7 +513,7 @@ def init_datasets_info():
     datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'splice junction',
                                            'splice-junction-modified.csv'))
-    key_attrib_indices.append(1)
+    key_attrib_indices.append(None)
     class_attrib_indices.append(0)
     split_chars.append(',')
     missing_value_strings.append(None)

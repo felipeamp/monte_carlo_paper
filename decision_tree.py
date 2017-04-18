@@ -805,8 +805,8 @@ class TreeNode(object):
 
             attrib_num_values = len(self.dataset.attrib_int_to_value[attrib_index])
             curr_contingency_table = np.zeros((attrib_num_values, self.dataset.num_classes),
-                                              dtype=float)
-            curr_values_num_samples = np.zeros((attrib_num_values), dtype=float)
+                                              dtype=int)
+            curr_values_num_samples = np.zeros((attrib_num_values), dtype=int)
 
             for sample_index in self.valid_samples_indices:
                 curr_sample_value = self.dataset.samples[sample_index][attrib_index]
@@ -1049,6 +1049,7 @@ class TreeNode(object):
                                        self.max_depth_remaining - 1,
                                        self._min_samples_per_node,
                                        self._use_stop_conditions,
+                                       self._max_p_value_chi_sq,
                                        self.is_monte_carlo_criterion,
                                        self.upper_p_value_threshold,
                                        self.lower_p_value_threshold,

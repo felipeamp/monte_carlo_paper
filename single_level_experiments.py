@@ -286,6 +286,9 @@ def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_ind
     with open(output_csv_filepath, 'a') as fout:
         for dataset_number, filepath in enumerate(datasets_filepaths):
             if not os.path.exists(filepath) or not os.path.isfile(filepath):
+                print('Dataset filepath does not exist or is not a file:')
+                print(filepath)
+                print('Skipping to the next dataset.')
                 continue
 
             train_dataset = dataset.Dataset(filepath,
@@ -378,7 +381,7 @@ def init_datasets_info():
     # Cars:
     dataset_names.append('Cars')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'cars'
+                                           'cars',
                                            'cars.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
@@ -388,7 +391,7 @@ def init_datasets_info():
     # Cars with Aggregated Values:
     dataset_names.append('Cars with aggreg')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'cars'
+                                           'cars',
                                            'cars_with_aggreg.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
@@ -398,7 +401,7 @@ def init_datasets_info():
     # Contraceptive:
     dataset_names.append('Contraceptive')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'contraceptive'
+                                           'contraceptive',
                                            'contraceptive.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
@@ -408,7 +411,7 @@ def init_datasets_info():
     # Contraceptive with Aggregated Values:
     dataset_names.append('Contraceptive with aggreg')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'contraceptive'
+                                           'contraceptive',
                                            'contraceptive_with_aggreg.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
@@ -418,7 +421,7 @@ def init_datasets_info():
     # Cover Type with Aggregated Values:
     dataset_names.append('Cover Type with aggreg')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'cover type'
+                                           'cover type',
                                            'cover_type_with_aggreg.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
@@ -428,7 +431,7 @@ def init_datasets_info():
     # KDD98 Multiclass 2:
     dataset_names.append('KDD98 multiclass 2')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'kdd98 multiclass'
+                                           'kdd98 multiclass',
                                            'kdd98_multiclass_2.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
@@ -438,7 +441,7 @@ def init_datasets_info():
     # KDD98 Multiclass 3:
     dataset_names.append('KDD98 multiclass 3')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'kdd98 multiclass'
+                                           'kdd98 multiclass',
                                            'kdd98_multiclass_3.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
@@ -448,7 +451,7 @@ def init_datasets_info():
     # KDD98 Multiclass 5:
     dataset_names.append('KDD98 multiclass 5')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'kdd98 multiclass'
+                                           'kdd98 multiclass',
                                            'kdd98_multiclass_5.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
@@ -458,7 +461,7 @@ def init_datasets_info():
     # KDD98 Multiclass 9:
     dataset_names.append('KDD98 multiclass 9')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'kdd98 multiclass'
+                                           'kdd98 multiclass',
                                            'kdd98_multiclass_9.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
@@ -508,7 +511,7 @@ def init_datasets_info():
     # Splice Junction:
     dataset_names.append('Splice Junction')
     datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'splice junction'
+                                           'splice junction',
                                            'splice-junction-modified.csv'))
     key_attrib_indices.append(1)
     class_attrib_indices.append(0)
@@ -656,24 +659,24 @@ if __name__ == '__main__':
              lower_p_value_threshold=None,
              prob_monte_carlo=None,
              output_csv_filepath=OUTPUT_CSV_FILEPATH)
-        # Run with Monte Carlo Framework
-        for (curr_use_random_ordering,
-             (curr_upper_p_value_threshold,
-              curr_lower_p_value_threshold,
-              curr_prob_monte_carlo)) in itertools.product(USE_RANDOM, PARAMETERS_LIST):
-            main(DATASET_NAMES,
-                 DATASETS_FILEPATHS,
-                 KEY_ATTRIB_INDICES,
-                 CLASS_ATTRIB_INDICES,
-                 SPLIT_CHARS,
-                 MISSING_VALUE_STRINGS,
-                 curr_num_training_samples,
-                 NUM_TRIALS,
-                 use_chi_sq_test=False,
-                 max_p_value_chi_sq=None,
-                 use_monte_carlo=True,
-                 use_random_ordering=curr_use_random_ordering,
-                 upper_p_value_threshold=curr_upper_p_value_threshold,
-                 lower_p_value_threshold=curr_lower_p_value_threshold,
-                 prob_monte_carlo=curr_prob_monte_carlo,
-                 output_csv_filepath=OUTPUT_CSV_FILEPATH)
+        # # Run with Monte Carlo Framework
+        # for (curr_use_random_ordering,
+        #      (curr_upper_p_value_threshold,
+        #       curr_lower_p_value_threshold,
+        #       curr_prob_monte_carlo)) in itertools.product(USE_RANDOM, PARAMETERS_LIST):
+        #     main(DATASET_NAMES,
+        #          DATASETS_FILEPATHS,
+        #          KEY_ATTRIB_INDICES,
+        #          CLASS_ATTRIB_INDICES,
+        #          SPLIT_CHARS,
+        #          MISSING_VALUE_STRINGS,
+        #          curr_num_training_samples,
+        #          NUM_TRIALS,
+        #          use_chi_sq_test=False,
+        #          max_p_value_chi_sq=None,
+        #          use_monte_carlo=True,
+        #          use_random_ordering=curr_use_random_ordering,
+        #          upper_p_value_threshold=curr_upper_p_value_threshold,
+        #          lower_p_value_threshold=curr_lower_p_value_threshold,
+        #          prob_monte_carlo=curr_prob_monte_carlo,
+        #          output_csv_filepath=OUTPUT_CSV_FILEPATH)

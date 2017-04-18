@@ -224,7 +224,7 @@ def init_datasets_info():
 
     dataset_base_path = os.path.join('.', 'datasets')
 
-    # Adult census income
+        # Adult census income
     dataset_names.append('Adult Census Income')
     datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'adult census income',
@@ -244,11 +244,81 @@ def init_datasets_info():
     split_chars.append(',')
     missing_value_strings.append(None)
 
+    # Cars with Aggregated Values:
+    dataset_names.append('Cars with aggreg')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
+                                           'cars'
+                                           'cars_with_aggreg.csv'))
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
+
     # Contraceptive:
     dataset_names.append('Contraceptive')
     datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'contraceptive'
                                            'contraceptive.csv'))
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
+
+    # Contraceptive with Aggregated Values:
+    dataset_names.append('Contraceptive with aggreg')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
+                                           'contraceptive'
+                                           'contraceptive_with_aggreg.csv'))
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
+
+    # Cover Type with Aggregated Values:
+    dataset_names.append('Cover Type with aggreg')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
+                                           'cover type'
+                                           'cover_type_with_aggreg.csv'))
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
+
+    # KDD98 Multiclass 2:
+    dataset_names.append('KDD98 multiclass 2')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
+                                           'kdd98 multiclass'
+                                           'kdd98_multiclass_2.csv'))
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
+
+    # KDD98 Multiclass 3:
+    dataset_names.append('KDD98 multiclass 3')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
+                                           'kdd98 multiclass'
+                                           'kdd98_multiclass_3.csv'))
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
+
+    # KDD98 Multiclass 5:
+    dataset_names.append('KDD98 multiclass 5')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
+                                           'kdd98 multiclass'
+                                           'kdd98_multiclass_5.csv'))
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
+
+    # KDD98 Multiclass 9:
+    dataset_names.append('KDD98 multiclass 9')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
+                                           'kdd98 multiclass'
+                                           'kdd98_multiclass_9.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
     split_chars.append(',')
@@ -268,7 +338,17 @@ def init_datasets_info():
     dataset_names.append('Nursery')
     datasets_filepaths.append(os.path.join(dataset_base_path,
                                            'nursery',
-                                           'nursery.txt'))
+                                           'nursery.csv'))
+    key_attrib_indices.append(None)
+    class_attrib_indices.append(-1)
+    split_chars.append(',')
+    missing_value_strings.append(None)
+
+    # Nursery with Aggregated Values:
+    dataset_names.append('Nursery with aggreg')
+    datasets_filepaths.append(os.path.join(dataset_base_path,
+                                           'nursery',
+                                           'nursery_with_aggreg.csv'))
     key_attrib_indices.append(None)
     class_attrib_indices.append(-1)
     split_chars.append(',')

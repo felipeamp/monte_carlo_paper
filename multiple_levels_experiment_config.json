@@ -1,7 +1,7 @@
 {
     "datasets basepath": "./datasets",
-    "use all datasets": true, // when true, do not supply "datasets names"
-    // "datasets names": [ // only used when "use all datasets" is false
+    "use all datasets": true, // when true, do not supply "datasets folders"
+    // "datasets folders": [ // only used when "use all datasets" is false
     //     "adult census income",
     //     "cars",
     //     "cars with aggreg",

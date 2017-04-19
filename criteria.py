@@ -584,7 +584,7 @@ class Twoing(Criterion):
                 for size_left_superclass in range(1, number_non_empty_classes // 2 + 1)):
             set_left_classes = set(left_classes)
             set_right_classes = non_empty_classes - set_left_classes
-            if len(set_left_classes) == 0 or len(set_right_classes) == 0:
+            if not set_left_classes or not set_right_classes:
                 # A valid split must have at least one sample in each side
                 continue
             yield set_left_classes, set_right_classes

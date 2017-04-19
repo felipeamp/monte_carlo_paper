@@ -134,265 +134,38 @@ def save_trial_info(dataset_name, num_total_samples, trial_number, criterion_nam
     output_file_descriptor.flush()
 
 
-def main(dataset_names, datasets_filepaths, key_attrib_indices, class_attrib_indices, split_chars,
-         missing_value_strings, min_num_samples_allowed, max_depth, num_trials, use_chi_sq_test,
+def main(datasets_configs, min_num_samples_allowed, max_depth, num_trials, use_chi_sq_test,
          max_p_value_chi_sq, use_monte_carlo, use_random_ordering, upper_p_value_threshold,
-         lower_p_value_threshold, prob_monte_carlo, output_csv_filepath,
-         output_split_char=','):
+         lower_p_value_threshold, prob_monte_carlo, output_csv_filepath, output_split_char=','):
     with open(output_csv_filepath, 'a') as fout:
-        for dataset_number, filepath in enumerate(datasets_filepaths):
-            if not os.path.exists(filepath) or not os.path.isfile(filepath):
-                print('Dataset filepath does not exist or is not a file:')
-                print(filepath)
-                print('Skipping to the next dataset.')
-                continue
-
-            train_dataset = dataset.Dataset(filepath,
-                                            key_attrib_indices[dataset_number],
-                                            class_attrib_indices[dataset_number],
-                                            split_chars[dataset_number],
-                                            missing_value_strings[dataset_number])
+        for dataset_config in datasets_configs:
+            train_dataset = dataset.Dataset(dataset_config["filepath"],
+                                            dataset_config["key attrib index"],
+                                            dataset_config["class attrib index"],
+                                            dataset_config["split char"],
+                                            dataset_config["missing value string"])
             criteria.ORDER_RANDOMLY = use_random_ordering
 
-            print('-'*100)
-            print('Gini Gain')
-            print()
-            monte_carlo_experiment(dataset_names[dataset_number],
-                                   train_dataset,
-                                   criteria.GiniGain(),
-                                   min_num_samples_allowed,
-                                   max_depth,
-                                   num_trials,
-                                   use_chi_sq_test,
-                                   max_p_value_chi_sq,
-                                   use_monte_carlo,
-                                   upper_p_value_threshold,
-                                   lower_p_value_threshold,
-                                   prob_monte_carlo,
-                                   fout,
-                                   output_split_char)
-            print('-'*100)
-            print('Twoing')
-            print()
-            monte_carlo_experiment(dataset_names[dataset_number],
-                                   train_dataset,
-                                   criteria.Twoing(),
-                                   min_num_samples_allowed,
-                                   max_depth,
-                                   num_trials,
-                                   use_chi_sq_test,
-                                   max_p_value_chi_sq,
-                                   use_monte_carlo,
-                                   upper_p_value_threshold,
-                                   lower_p_value_threshold,
-                                   prob_monte_carlo,
-                                   fout,
-                                   output_split_char)
-            print('-'*100)
-            print('Gain Ratio')
-            print()
-            monte_carlo_experiment(dataset_names[dataset_number],
-                                   train_dataset,
-                                   criteria.GainRatio(),
-                                   min_num_samples_allowed,
-                                   max_depth,
-                                   num_trials,
-                                   use_chi_sq_test,
-                                   max_p_value_chi_sq,
-                                   use_monte_carlo,
-                                   upper_p_value_threshold,
-                                   lower_p_value_threshold,
-                                   prob_monte_carlo,
-                                   fout,
-                                   output_split_char)
+            criteria_list = [criteria.GiniGain(), criteria.Twoing(), criteria.GainRatio()]
+            for criterion in criteria_list:
+                print('-'*100)
+                print(criterion.name)
+                print()
+                monte_carlo_experiment(dataset_config["dataset name"],
+                                       train_dataset,
+                                       criterion,
+                                       min_num_samples_allowed,
+                                       max_depth,
+                                       num_trials,
+                                       use_chi_sq_test,
+                                       max_p_value_chi_sq,
+                                       use_monte_carlo,
+                                       upper_p_value_threshold,
+                                       lower_p_value_threshold,
+                                       prob_monte_carlo,
+                                       fout,
+                                       output_split_char)
 
-def init_datasets_info():
-    """Load information about every dataset available.
-
-    Returns:
-        Tuple containing, in order:
-            - Name of each dataset;
-            - Filepath of each dataset;
-            - Key's attribute index in each dataset (may be `None`);
-            - Class' attribute index in each dataset (may be negative, indexing from the end);
-            - Character used to split csv entries in each dataset;
-            - String representing missing values in each dataset (may be `None`).
-    """
-    dataset_names = []
-    datasets_filepaths = []
-    key_attrib_indices = []
-    class_attrib_indices = []
-    split_chars = []
-    missing_value_strings = []
-
-    dataset_base_path = os.path.join('.', 'datasets')
-
-        # Adult census income
-    dataset_names.append('Adult Census Income')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'adult census income',
-                                           'adult_no_quotation_marks.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append('')
-
-    # Cars:
-    dataset_names.append('Cars')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'cars',
-                                           'cars.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # Cars with Aggregated Values:
-    dataset_names.append('Cars with aggreg')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'cars',
-                                           'cars_with_aggreg.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # Contraceptive:
-    dataset_names.append('Contraceptive')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'contraceptive',
-                                           'contraceptive.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # Contraceptive with Aggregated Values:
-    dataset_names.append('Contraceptive with aggreg')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'contraceptive',
-                                           'contraceptive_with_aggreg.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # Cover Type with Aggregated Values:
-    dataset_names.append('Cover Type with aggreg')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'cover type',
-                                           'cover_type_with_aggreg.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # KDD98 Multiclass 2:
-    dataset_names.append('KDD98 multiclass 2')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'kdd98 multiclass',
-                                           'kdd98_multiclass_2.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # KDD98 Multiclass 3:
-    dataset_names.append('KDD98 multiclass 3')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'kdd98 multiclass',
-                                           'kdd98_multiclass_3.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # KDD98 Multiclass 5:
-    dataset_names.append('KDD98 multiclass 5')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'kdd98 multiclass',
-                                           'kdd98_multiclass_5.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # KDD98 Multiclass 9:
-    dataset_names.append('KDD98 multiclass 9')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'kdd98 multiclass',
-                                           'kdd98_multiclass_9.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # Mushroom
-    dataset_names.append('Mushroom')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'mushroom',
-                                           'mushroom.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(0)
-    split_chars.append(',')
-    missing_value_strings.append('?')
-
-    # Nursery:
-    dataset_names.append('Nursery')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'nursery',
-                                           'nursery.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # Nursery with Aggregated Values:
-    dataset_names.append('Nursery with aggreg')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'nursery',
-                                           'nursery_with_aggreg.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # Poker Hand:
-    dataset_names.append('Poker Hand')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'poker hand',
-                                           'poker-hand-modified.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # Splice Junction:
-    dataset_names.append('Splice Junction')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'splice junction',
-                                           'splice-junction-modified.csv'))
-    key_attrib_indices.append(1)
-    class_attrib_indices.append(0)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    # Titanic Survive:
-    dataset_names.append('Titanic Survive')
-    datasets_filepaths.append(os.path.join(dataset_base_path,
-                                           'titanic',
-                                           'titanicSurvive.csv'))
-    key_attrib_indices.append(None)
-    class_attrib_indices.append(-1)
-    split_chars.append(',')
-    missing_value_strings.append(None)
-
-    return (dataset_names,
-            datasets_filepaths,
-            key_attrib_indices,
-            class_attrib_indices,
-            split_chars,
-            missing_value_strings)
 
 def init_output_csv(output_csv_filepath, output_split_char=','):
     """Writes the header to the CSV output file.
@@ -436,12 +209,8 @@ def init_output_csv(output_csv_filepath, output_split_char=','):
 
 if __name__ == '__main__':
     # Datasets
-    (DATASET_NAMES,
-     DATASETS_FILEPATHS,
-     KEY_ATTRIB_INDICES,
-     CLASS_ATTRIB_INDICES,
-     SPLIT_CHARS,
-     MISSING_VALUE_STRINGS) = init_datasets_info()
+    DATASETS_CONFIGS = dataset.load_all_configs(os.path.join('.', 'datasets'))
+    DATASETS_CONFIGS.sort(key=lambda x: x["dataset name"].lower())
 
     # Output
     OUTPUT_CSV_FILEPATH = os.path.join(
@@ -470,12 +239,7 @@ if __name__ == '__main__':
     # Experiments
     for curr_max_depth in MAX_DEPTH:
         # Run without any bias treatment
-        main(DATASET_NAMES,
-             DATASETS_FILEPATHS,
-             KEY_ATTRIB_INDICES,
-             CLASS_ATTRIB_INDICES,
-             SPLIT_CHARS,
-             MISSING_VALUE_STRINGS,
+        main(DATASETS_CONFIGS,
              MIN_NUM_SAMPLES_ALLOWED,
              curr_max_depth,
              NUM_TRIALS,
@@ -489,12 +253,7 @@ if __name__ == '__main__':
              output_csv_filepath=OUTPUT_CSV_FILEPATH)
         # Run with Chi Square test and minimum number of samples in second most frequent value
         for curr_max_p_value_chi_sq in MAX_P_VALUE_CHI_SQ:
-            main(DATASET_NAMES,
-                 DATASETS_FILEPATHS,
-                 KEY_ATTRIB_INDICES,
-                 CLASS_ATTRIB_INDICES,
-                 SPLIT_CHARS,
-                 MISSING_VALUE_STRINGS,
+            main(DATASETS_CONFIGS,
                  MIN_NUM_SAMPLES_ALLOWED,
                  curr_max_depth,
                  NUM_TRIALS,
@@ -511,12 +270,7 @@ if __name__ == '__main__':
              (curr_upper_p_value_threshold,
               curr_lower_p_value_threshold,
               curr_prob_monte_carlo)) in itertools.product(USE_RANDOM, PARAMETERS_LIST):
-            main(DATASET_NAMES,
-                 DATASETS_FILEPATHS,
-                 KEY_ATTRIB_INDICES,
-                 CLASS_ATTRIB_INDICES,
-                 SPLIT_CHARS,
-                 MISSING_VALUE_STRINGS,
+            main(DATASETS_CONFIGS,
                  MIN_NUM_SAMPLES_ALLOWED,
                  curr_max_depth,
                  NUM_TRIALS,

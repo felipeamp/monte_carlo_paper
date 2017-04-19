@@ -6,6 +6,8 @@ This module contains only the Dataset class.
 """
 
 import copy
+import json
+import os
 import sys
 import timeit
 
@@ -125,7 +127,7 @@ class Dataset(object):
             start_time = timeit.default_timer()
             for line in fin:
                 line_list = line.rstrip().split(split_char)
-                if len(line_list) == 0:
+                if not line_list:
                     # empty line
                     continue
                 samples_counter += 1
@@ -339,7 +341,7 @@ class Dataset(object):
             start_time = timeit.default_timer()
             for line in fin:
                 line_list = line.rstrip().split(split_char)
-                if len(line_list) == 0:
+                if not line_list:
                     # empty line
                     continue
                 samples_counter += 1
@@ -571,3 +573,95 @@ class Dataset(object):
         for class_int, num_samples in enumerate(self.class_index_num_samples):
             print('\t{} --> {}'.format(class_int, num_samples))
         print()
+
+def load_config(folderpath):
+    """Loads the configuration information for the dataset contained in the given folderpath in a
+    dict.
+
+    Args:
+        folderpath (str): path to the dataset folder, which should contain `config.json` and
+        `data.csv` files. `config.json` should have the following fields:
+            - "dataset name" (str): the name of the current dataset;
+            - "key attrib index" (int or null): the index containing the samples keys;
+            - "class attrib index" (int): the index containing the samples classes. If negative,
+                counts backwards.
+            - "split char" (str): character or string used to separate columns in the data.csv file;
+            - "missing value string" (str): string used to indicate a missing value for that sample
+                and attribute.
+
+    Returns:
+        A dict with all the config.json key/values and also a "filepath" field, containing the
+        data.csv path.
+    """
+    if not os.path.exists(folderpath):
+        print('Folder "{}" does not exist.'.format(folderpath))
+        print('Skipping this dataset.')
+        return None
+
+    config_filepath = os.path.join(folderpath, 'config.json')
+    if not os.path.exists(config_filepath) or not os.path.isfile(config_filepath):
+        print('"config.json" file does not exist in folder "{}".'.format(folderpath))
+        print('Skipping this dataset.')
+        return None
+
+    data_filepath = os.path.join(folderpath, 'data.csv')
+    if not os.path.exists(data_filepath) or not os.path.isfile(data_filepath):
+        print('data.csv file does not exist in folder "{}".'.format(folderpath))
+        print('Skipping this dataset.')
+        return None
+
+    print('Loading dataset configuration file for "{}".'.format(folderpath))
+    with open(config_filepath, 'r') as config:
+        config = json.load(config)
+        mandatory_fields = ["dataset name", "key attrib index", "class attrib index", "split char",
+                            "missing value string"]
+        missing_fields = []
+        for field in mandatory_fields:
+            if field not in config:
+                missing_fields.append(field)
+        if missing_fields:
+            print('Missing field(s) in {}:'.format(config_filepath))
+            for field in missing_fields:
+                print('\t{}'.format(field))
+            print()
+            print('Skipping this dataset.')
+            return None
+        if not isinstance(config["dataset name"], str):
+            print('"dataset name" must be a string.')
+            print('Skipping this dataset.')
+            return None
+        if (config["key attrib index"] is not None
+                and not isinstance(config["key attrib index"], int)):
+            print('"key attrib index" must have an integer value or be null.')
+            print('Skipping this dataset.')
+            return None
+        if not isinstance(config["class attrib index"], int):
+            print('"class attrib index" must have an integer value.')
+            print('Skipping this dataset.')
+            return None
+        if not isinstance(config["split char"], str):
+            print('"split char" must be a string.')
+            print('Skipping this dataset.')
+            return None
+        if (config["missing value string"] is not None
+                and not isinstance(config["missing value string"], str)):
+            print('"missing value string" must be a string or null.')
+            print('Skipping this dataset.')
+            return None
+
+        config["filepath"] = data_filepath
+        return config
+
+def load_all_configs(dataset_basepath):
+    """Load information about every dataset available in the `dataset_basepath`.
+
+    Returns:
+        List of config dict information (see return type for `dataset.load_config`).
+    """
+    dataset_folders = [os.path.join(dataset_basepath, entry)
+                       for entry in os.listdir(dataset_basepath)
+                       if os.path.isdir(os.path.join(dataset_basepath, entry))]
+    config_list = []
+    for curr_folder in dataset_folders:
+        config_list.append(load_config(curr_folder))
+    return config_list

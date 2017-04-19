@@ -36,6 +36,7 @@
     "max depth": 5,
     "use cross-validation": true, // when false, do not supply "num folds"
     "num folds": 10, // only used when "use cross-validation" is true
+    "is stratified": true, // only used when "use cross-validation" is true
 
     "prunning parameters": {
         "use chi-sq test": false, // when false, do not supply "max chi-sq p-value"

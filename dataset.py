@@ -574,6 +574,7 @@ class Dataset(object):
             print('\t{} --> {}'.format(class_int, num_samples))
         print()
 
+
 def load_config(folderpath):
     """Loads the configuration information for the dataset contained in the given folderpath in a
     dict.
@@ -652,6 +653,7 @@ def load_config(folderpath):
         config["filepath"] = data_filepath
         return config
 
+
 def load_all_configs(dataset_basepath):
     """Load information about every dataset available in the `dataset_basepath`.
 
@@ -665,3 +667,21 @@ def load_all_configs(dataset_basepath):
     for curr_folder in dataset_folders:
         config_list.append(load_config(curr_folder))
     return config_list
+
+
+def load_all_datasets(datasets_configs):
+    """Creates a Dataset object for every dataset available in the `datasets_configs` list.
+
+    Returns:
+        List of tuples (dataset_name, Dataset object).
+    """
+    datasets_configs.sort(key=lambda x: x["dataset name"].lower())
+    datasets_list = []
+    for dataset_config in datasets_configs:
+        datasets_list.append((dataset_config["dataset name"],
+                              Dataset(dataset_config["filepath"],
+                                      dataset_config["key attrib index"],
+                                      dataset_config["class attrib index"],
+                                      dataset_config["split char"],
+                                      dataset_config["missing value string"])))
+    return datasets_list

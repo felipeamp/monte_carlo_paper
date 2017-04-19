@@ -134,24 +134,18 @@ def save_trial_info(dataset_name, num_total_samples, trial_number, criterion_nam
     output_file_descriptor.flush()
 
 
-def main(datasets_configs, min_num_samples_allowed, max_depth, num_trials, use_chi_sq_test,
+def main(datasets, min_num_samples_allowed, max_depth, num_trials, use_chi_sq_test,
          max_p_value_chi_sq, use_monte_carlo, use_random_ordering, upper_p_value_threshold,
          lower_p_value_threshold, prob_monte_carlo, output_csv_filepath, output_split_char=','):
     with open(output_csv_filepath, 'a') as fout:
-        for dataset_config in datasets_configs:
-            train_dataset = dataset.Dataset(dataset_config["filepath"],
-                                            dataset_config["key attrib index"],
-                                            dataset_config["class attrib index"],
-                                            dataset_config["split char"],
-                                            dataset_config["missing value string"])
-            criteria.ORDER_RANDOMLY = use_random_ordering
-
-            criteria_list = [criteria.GiniGain(), criteria.Twoing(), criteria.GainRatio()]
+        criteria.ORDER_RANDOMLY = use_random_ordering
+        criteria_list = [criteria.GiniGain(), criteria.Twoing(), criteria.GainRatio()]
+        for dataset_name, train_dataset in datasets:
             for criterion in criteria_list:
                 print('-'*100)
                 print(criterion.name)
                 print()
-                monte_carlo_experiment(dataset_config["dataset name"],
+                monte_carlo_experiment(dataset_name,
                                        train_dataset,
                                        criterion,
                                        min_num_samples_allowed,
@@ -210,7 +204,7 @@ def init_output_csv(output_csv_filepath, output_split_char=','):
 if __name__ == '__main__':
     # Datasets
     DATASETS_CONFIGS = dataset.load_all_configs(os.path.join('.', 'datasets'))
-    DATASETS_CONFIGS.sort(key=lambda x: x["dataset name"].lower())
+    DATASETS = dataset.load_all_datasets(DATASETS_CONFIGS)
 
     # Output
     OUTPUT_CSV_FILEPATH = os.path.join(
@@ -239,7 +233,7 @@ if __name__ == '__main__':
     # Experiments
     for curr_max_depth in MAX_DEPTH:
         # Run without any bias treatment
-        main(DATASETS_CONFIGS,
+        main(DATASETS,
              MIN_NUM_SAMPLES_ALLOWED,
              curr_max_depth,
              NUM_TRIALS,
@@ -253,7 +247,7 @@ if __name__ == '__main__':
              output_csv_filepath=OUTPUT_CSV_FILEPATH)
         # Run with Chi Square test and minimum number of samples in second most frequent value
         for curr_max_p_value_chi_sq in MAX_P_VALUE_CHI_SQ:
-            main(DATASETS_CONFIGS,
+            main(DATASETS,
                  MIN_NUM_SAMPLES_ALLOWED,
                  curr_max_depth,
                  NUM_TRIALS,
@@ -270,7 +264,7 @@ if __name__ == '__main__':
              (curr_upper_p_value_threshold,
               curr_lower_p_value_threshold,
               curr_prob_monte_carlo)) in itertools.product(USE_RANDOM, PARAMETERS_LIST):
-            main(DATASETS_CONFIGS,
+            main(DATASETS,
                  MIN_NUM_SAMPLES_ALLOWED,
                  curr_max_depth,
                  NUM_TRIALS,

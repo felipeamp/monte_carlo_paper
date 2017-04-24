@@ -928,11 +928,18 @@ class TreeNode(object):
             return None
 
         # If a valid attribute has only one value, it should be marked as invalid from this node on.
+        num_valid_nominal_attributes = 0
         for attrib_index in range(len(self.valid_nominal_attribute)):
             if not self.valid_nominal_attribute[attrib_index]:
                 continue
             if not _has_multiple_values(self.contingency_tables[attrib_index][1]):
                 self.valid_nominal_attribute[attrib_index] = False
+            else:
+                num_valid_nominal_attributes += 1
+
+        # If there are no valid nominal attributes, this node should be a leaf.
+        if not num_valid_nominal_attributes:
+            return None
 
         if self._use_stop_conditions:
             num_valid_attributes = sum(self.dataset.valid_numeric_attribute)

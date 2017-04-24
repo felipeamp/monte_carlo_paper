@@ -286,7 +286,9 @@ def main(datasets, num_training_samples, num_trials, use_chi_sq_test, max_p_valu
     """
     with open(output_csv_filepath, 'a') as fout:
         criteria.ORDER_RANDOMLY = use_random_ordering
-        criteria_list = [criteria.GiniGain(), criteria.Twoing(), criteria.GainRatio()]
+        criteria_list = [criteria.GiniGain(),]
+                         # criteria.Twoing(),
+                         # criteria.GainRatio()]
         for dataset_name, train_dataset in datasets:
             for criterion in criteria_list:
                 print('-'*100)
@@ -387,7 +389,7 @@ if __name__ == '__main__':
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
         'outputs',
-        'single_level_experiment_1.csv')
+        'single_level_experiment_only_gini_gain_limit_16.csv')
     init_output_csv(OUTPUT_CSV_FILEPATH)
 
     # Parameters configurations

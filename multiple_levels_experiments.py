@@ -139,7 +139,10 @@ def main(datasets, min_num_samples_allowed, max_depth, num_trials, use_chi_sq_te
          lower_p_value_threshold, prob_monte_carlo, output_csv_filepath, output_split_char=','):
     with open(output_csv_filepath, 'a') as fout:
         criteria.ORDER_RANDOMLY = use_random_ordering
-        criteria_list = [criteria.GiniGain(), criteria.Twoing(), criteria.GainRatio()]
+        criteria_list = [
+            #criteria.GiniGain(),
+            criteria.Twoing(),
+            criteria.GainRatio()]
         for dataset_name, train_dataset in datasets:
             for criterion in criteria_list:
                 print('-'*100)
@@ -210,7 +213,7 @@ if __name__ == '__main__':
     OUTPUT_CSV_FILEPATH = os.path.join(
         '.',
         'outputs',
-        'multiple_levels_experiment_1.csv')
+        'multiple_levels_experiment_without_gini_gain.csv')
     init_output_csv(OUTPUT_CSV_FILEPATH)
 
     # Parameters configurations

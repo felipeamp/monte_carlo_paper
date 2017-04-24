@@ -26,6 +26,16 @@ if __name__ == '__main__':
 
     with open(experiment_config_filepath, 'r') as experiment_config_json:
         experiment_config = json.load(experiment_config_json)
+
+    if os.path.exists(experiment_config["output folder"]):
+        print('Output folder already exists. This experiment may delete existing files inside it.')
+        input_char = input('Should we continue? [y/N]\n')
+        input_char = input_char.lower()
+        if input_char != 'y' and input_char != 'yes':
+            exit()
+    else:
+        os.makedirs(experiment_config["output folder"])
+
     if experiment_config["use cross-validation"]:
         cross_validation_experiment.main(experiment_config)
     else:

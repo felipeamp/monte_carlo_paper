@@ -27,7 +27,7 @@ def main(experiment_config):
     """Sets the configurations according to `experiment_config` and runs them.
     """
     raw_output_filepath = os.path.join(experiment_config["output folder"], 'raw_output.csv')
-    with open(raw_output_filepath, 'a') as fout:
+    with open(raw_output_filepath, 'w') as fout:
         init_raw_output_csv(fout, output_split_char=',')
         criteria_list = get_criteria(experiment_config["criteria"])
 
@@ -54,10 +54,10 @@ def main(experiment_config):
             random_oder_list = None
 
         decision_tree.USE_MIN_SAMPLES_SECOND_LARGEST_CLASS = experiment_config[
-            "use second most freq class min samples"]
+            "prunning parameters"]["use second most freq class min samples"]
         if decision_tree.USE_MIN_SAMPLES_SECOND_LARGEST_CLASS:
             decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = experiment_config[
-                "second most freq class min samples"]
+                "prunning parameters"]["second most freq class min samples"]
         else:
             decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = None
 
@@ -70,7 +70,7 @@ def main(experiment_config):
                  min_num_samples_allowed) in itertools.product(
                      datasets,
                      random_oder_list,
-                     experiment_config["num min samples allowed"]):
+                     experiment_config["prunning parameters"]["min num samples allowed"]):
                 criteria.ORDER_RANDOMLY = use_random_ordering
                 for criterion in criteria_list:
                     print('-'*100)

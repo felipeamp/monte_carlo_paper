@@ -7,6 +7,7 @@
 
 import json
 import os
+import shutil
 import sys
 
 import cross_validation_experiment
@@ -18,15 +19,16 @@ if __name__ == '__main__':
         print('Please include a path to an experiment configuration file.')
         sys.exit(1)
 
+    # Experiment config
     experiment_config_filepath = sys.argv[1]
     if (not os.path.exists(experiment_config_filepath)
             or not os.path.isfile(experiment_config_filepath)):
         print('The path entered is NOT a valid experiment configuration file.')
         sys.exit(1)
-
     with open(experiment_config_filepath, 'r') as experiment_config_json:
         experiment_config = json.load(experiment_config_json)
 
+    # Output folder
     if os.path.exists(experiment_config["output folder"]):
         print('Output folder already exists. This experiment may delete existing files inside it.')
         input_char = input('Should we continue? [y/N]\n')
@@ -35,6 +37,10 @@ if __name__ == '__main__':
             exit()
     else:
         os.makedirs(experiment_config["output folder"])
+
+    # Copy experiment config file to output folder.
+    shutil.copyfile(experiment_config_filepath,
+                    os.path.join(experiment_config["output folder"], 'experiment_config.json'))
 
     if experiment_config["use cross-validation"]:
         cross_validation_experiment.main(experiment_config)

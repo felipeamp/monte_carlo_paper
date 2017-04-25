@@ -999,8 +999,8 @@ class TreeNode(object):
                                                                         self.num_fails_allowed)
 
         if math.isinf(criterion_value):
-            # Stop condition for Max Cut tree: above p_value or no valid attribute index with more
-            # than one value (then criterion_value is default, which is +- inf).
+            # Stop condition when there is no valid attribute with more than one value (then
+            # criterion_value is default, which is +- inf).
             return None
 
         if self.dataset.valid_numeric_attribute[separation_attrib_index]:

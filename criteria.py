@@ -81,18 +81,6 @@ class GiniGain(Criterion):
                 - Position of the accepted attribute in the attributes' list ordered by the
                 criterion value.
         """
-        def _remove_duplicate_attributes(best_splits_per_attrib, num_attributes):
-            seen_attrib = [False] * num_attributes
-            ret = []
-            for best_attrib_split in best_splits_per_attrib:
-                curr_attrib_index, _, curr_criterion_value = best_attrib_split
-                if seen_attrib[curr_attrib_index] or math.isinf(curr_criterion_value):
-                    continue
-                seen_attrib[curr_attrib_index] = True
-                ret.append(best_attrib_split)
-            return ret
-
-
         original_gini = cls._calculate_gini_index(len(tree_node.valid_samples_indices),
                                                   tree_node.class_index_num_samples)
         best_splits_per_attrib = []
@@ -157,22 +145,16 @@ class GiniGain(Criterion):
                                                     best_right_values],
                                                    best_total_gini_gain))
         if num_tests == 0: # Just return attribute/split with maximum Gini Gain.
-            max_criterion_value = float('-inf')
             best_attribute_and_split = (None, [], float('-inf'))
-            for best_attrib_split in best_splits_per_attrib:
-                criterion_value = best_attrib_split[2]
-                if criterion_value > max_criterion_value:
-                    max_criterion_value = criterion_value
-                    best_attribute_and_split = best_attrib_split
+            for curr_attrib_split in best_splits_per_attrib:
+                if curr_attrib_split[2] > best_attribute_and_split[2]:
+                    best_attribute_and_split = curr_attrib_split
             num_monte_carlo_tests_needed = 0
             position_of_accepted = 1
             return (*best_attribute_and_split,
                     num_monte_carlo_tests_needed,
                     position_of_accepted)
         else: # use Monte Carlo approach.
-            best_splits_per_attrib = _remove_duplicate_attributes(
-                best_splits_per_attrib,
-                len(tree_node.valid_nominal_attribute))
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
@@ -471,17 +453,6 @@ class Twoing(Criterion):
                 - Position of the accepted attribute in the attributes' list ordered by the
                 criterion value.
         """
-        def _remove_duplicate_attributes(best_splits_per_attrib, num_attributes):
-            seen_attrib = [False] * num_attributes
-            ret = []
-            for best_attrib_split in best_splits_per_attrib:
-                curr_attrib_index, _, curr_criterion_value = best_attrib_split
-                if seen_attrib[curr_attrib_index] or math.isinf(curr_criterion_value):
-                    continue
-                seen_attrib[curr_attrib_index] = True
-                ret.append(best_attrib_split)
-            return ret
-
         best_splits_per_attrib = []
         cache_values_seen = []
         for attrib_index, is_valid_nominal_attrib in enumerate(tree_node.valid_nominal_attribute):
@@ -522,22 +493,16 @@ class Twoing(Criterion):
                                                [best_left_values, best_right_values],
                                                best_total_gini_gain))
         if num_tests == 0: # Just return attribute/split with maximum criterion value.
-            max_criterion_value = float('-inf')
             best_attribute_and_split = (None, [], float('-inf'))
-            for best_attrib_split in best_splits_per_attrib:
-                criterion_value = best_attrib_split[2]
-                if criterion_value > max_criterion_value:
-                    max_criterion_value = criterion_value
-                    best_attribute_and_split = best_attrib_split
+            for curr_attrib_split in best_splits_per_attrib:
+                if curr_attrib_split[2] > best_attribute_and_split[2]:
+                    best_attribute_and_split = curr_attrib_split
             num_monte_carlo_tests_needed = 0
             position_of_accepted = 1
             return (*best_attribute_and_split,
                     num_monte_carlo_tests_needed,
                     position_of_accepted)
         else: # use Monte Carlo approach.
-            best_splits_per_attrib = _remove_duplicate_attributes(
-                best_splits_per_attrib,
-                len(tree_node.valid_nominal_attribute))
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
@@ -854,13 +819,10 @@ class GainRatio(Criterion):
                                                curr_gain_ratio))
 
         if num_tests == 0: # Just return attribute/split with maximum criterion value.
-            max_criterion_value = float('-inf')
             best_attribute_and_split = (None, [], float('-inf'))
-            for best_attrib_split in best_splits_per_attrib:
-                criterion_value = best_attrib_split[2]
-                if criterion_value > max_criterion_value:
-                    max_criterion_value = criterion_value
-                    best_attribute_and_split = best_attrib_split
+            for curr_attrib_split in best_splits_per_attrib:
+                if curr_attrib_split[2] > best_attribute_and_split[2]:
+                    best_attribute_and_split = curr_attrib_split
             num_monte_carlo_tests_needed = 0
             position_of_accepted = 1
             return (*best_attribute_and_split,

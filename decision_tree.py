@@ -1079,8 +1079,8 @@ class TreeNode(object):
         for curr_split_samples_indices in splits_samples_indices:
             self.nodes.append(TreeNode(self.dataset,
                                        curr_split_samples_indices,
-                                       self.valid_nominal_attribute,
-                                       self.valid_numeric_attribute,
+                                       self.valid_nominal_attribute[:],
+                                       self.valid_numeric_attribute[:],
                                        self.max_depth_remaining - 1,
                                        self._min_samples_per_node,
                                        self._use_stop_conditions,

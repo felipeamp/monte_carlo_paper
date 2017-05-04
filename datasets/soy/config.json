@@ -1,0 +1,7 @@
+{
+    "dataset name": "Soybean",
+    "key attrib index": null,
+    "class attrib index": 0,
+    "split char": ",",
+    "missing value string": "?"
+}

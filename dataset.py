@@ -280,9 +280,9 @@ class Dataset(object):
         """Prints basic information of the loaded CSV.
         """
         print('Number of attributes: {}'.format(
-            len(self.valid_nominal_attribute) + len(self.valid_numeric_attribute)))
-        print('Number of nominal attributes: {}'.format(len(self.valid_nominal_attribute)))
-        print('Number of numeric attributes: {}'.format(len(self.valid_numeric_attribute)))
+            sum(self.valid_nominal_attribute) + sum(self.valid_numeric_attribute)))
+        print('Number of nominal attributes: {}'.format(sum(self.valid_nominal_attribute)))
+        print('Number of numeric attributes: {}'.format(sum(self.valid_numeric_attribute)))
         print('{} samples found!'.format(self.num_samples))
         print('{} classes found:'.format(self.num_classes))
         for class_index in range(self.num_classes):
@@ -665,17 +665,19 @@ def load_all_configs(dataset_basepath):
                        if os.path.isdir(os.path.join(dataset_basepath, entry))]
     config_list = []
     for curr_folder in dataset_folders:
-        config_list.append(load_config(curr_folder))
+        curr_config = load_config(curr_folder)
+        if curr_config is not None:
+            config_list.append(curr_config)
     return config_list
 
 
-def load_all_datasets(datasets_configs):
+def load_all_datasets(datasets_configs, load_numeric=False):
     """Creates a Dataset object for every dataset available in the `datasets_configs` list.
+    The argument `load_numeric` informs wether we should load numeric attributes or not.
 
     Returns:
         List of tuples (dataset_name, Dataset object).
     """
-    datasets_configs.sort(key=lambda x: x["dataset name"].lower())
     datasets_list = []
     for dataset_config in datasets_configs:
         datasets_list.append((dataset_config["dataset name"],
@@ -683,5 +685,6 @@ def load_all_datasets(datasets_configs):
                                       dataset_config["key attrib index"],
                                       dataset_config["class attrib index"],
                                       dataset_config["split char"],
-                                      dataset_config["missing value string"])))
+                                      dataset_config["missing value string"],
+                                      load_numeric)))
     return datasets_list

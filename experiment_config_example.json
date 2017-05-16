@@ -29,13 +29,14 @@
 
     "output folder": "./outputs/multiple levels experiment/monte carlo", // this folder files may be overwritten!
 
-    "num trials": [5],
+    "num trials": 5,
+    "starting seed index": 1, // optional, defaults to 1. Starts counting at 1.
     "calculate t-test on accuracy": true, // when false, do not supply "t-test single-sided p-value"
-    "t-test single-sided p-value": 0.1, // only used when "calculate t-test on accuracy" is true
+    "t-test single-sided p-value": 0.05, // only used when "calculate t-test on accuracy" is true
 
     "max depth": 5,
     "use cross-validation": true, // when false, do not supply "num folds"
-    "num folds": 10, // only used when "use cross-validation" is true
+    "num folds": 20, // only used when "use cross-validation" is true
     "is stratified": true, // only used when "use cross-validation" is true
 
     "prunning parameters": {

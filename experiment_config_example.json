@@ -49,7 +49,7 @@
             "upper p-value threshold": 0.4,
             "lower p-value threshold": 0.1,
             "prob monte carlo": 0.95,
-            "use random order": [false, true],
+            "use random order": false,
         },
 
         "min num samples allowed": [1],

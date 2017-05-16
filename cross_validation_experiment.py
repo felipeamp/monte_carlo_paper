@@ -15,6 +15,7 @@ import timeit
 import criteria
 import dataset
 import decision_tree
+import monte_carlo
 
 import numpy as np
 
@@ -65,6 +66,25 @@ def main(experiment_config):
         else:
             decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = None
 
+        if experiment_config["prunning parameters"]["use monte carlo"]:
+            is_random_ordering = experiment_config["prunning parameters"][
+                "monte carlo parameters"]["upper p-value threshold"]
+            is_random_ordering = experiment_config["prunning parameters"][
+                "monte carlo parameters"]["use random order"]
+            criteria.ORDER_RANDOMLY = is_random_ordering
+            upper_p_value_threshold = experiment_config["prunning parameters"][
+                "monte carlo parameters"]["upper p-value threshold"]
+            lower_p_value_threshold = experiment_config["prunning parameters"][
+                "monte carlo parameters"]["lower p-value threshold"]
+            prob_monte_carlo = experiment_config["prunning parameters"][
+                "monte carlo parameters"]["prob monte carlo"]
+        else:
+            use_monte_carlo = False
+            is_random_ordering = None
+            upper_p_value_threshold = None
+            lower_p_value_threshold = None
+            prob_monte_carlo = None
+
         if experiment_config["use all datasets"]:
             datasets_configs = dataset.load_all_configs(experiment_config["datasets basepath"])
             datasets_configs.sort(key=lambda config: config["dataset name"])
@@ -98,6 +118,11 @@ def main(experiment_config):
                         is_stratified=experiment_config["is stratified"],
                         use_chi_sq_test=experiment_config["prunning parameters"]["use chi-sq test"],
                         max_p_value_chi_sq=max_p_value_chi_sq,
+                        use_monte_carlo=use_monte_carlo,
+                        is_random_ordering=is_random_ordering,
+                        upper_p_value_threshold=upper_p_value_threshold,
+                        lower_p_value_threshold=lower_p_value_threshold,
+                        prob_monte_carlo=prob_monte_carlo,
                         output_file_descriptor=fout,
                         output_split_char=',')
         else:
@@ -121,6 +146,11 @@ def main(experiment_config):
                         is_stratified=experiment_config["is stratified"],
                         use_chi_sq_test=experiment_config["prunning parameters"]["use chi-sq test"],
                         max_p_value_chi_sq=max_p_value_chi_sq,
+                        use_monte_carlo=use_monte_carlo,
+                        is_random_ordering=is_random_ordering,
+                        upper_p_value_threshold=upper_p_value_threshold,
+                        lower_p_value_threshold=lower_p_value_threshold,
+                        prob_monte_carlo=prob_monte_carlo,
                         output_file_descriptor=fout,
                         output_split_char=',')
 
@@ -144,6 +174,12 @@ def init_raw_output_csv(raw_output_file_descriptor, output_split_char=','):
                    'Uses Chi-Square Test',
                    'Maximum p-value Allowed by Chi-Square Test [between 0 and 1]',
                    'Minimum Number in Second Most Frequent Value',
+
+                   'Uses Monte Carlo',
+                   'Are Attributes in Random Order?',
+                   'U [between 0 and 1]',
+                   'L [between 0 and 1]',
+                   'prob_monte_carlo [between 0 and 1]',
 
                    'Average Number of Valid Attributes in Root Node (m)',
 
@@ -196,7 +232,8 @@ def get_criteria(criteria_names_list):
 
 def run(dataset_name, train_dataset, criterion, min_num_samples_allowed, max_depth, num_trials,
         starting_seed, num_folds, is_stratified, use_chi_sq_test, max_p_value_chi_sq,
-        output_file_descriptor, output_split_char=',', seed=None):
+        use_monte_carlo, is_random_ordering, upper_p_value_threshold, lower_p_value_threshold,
+        prob_monte_carlo, output_file_descriptor, output_split_char=',', seed=None):
     """Runs `num_trials` experiments, each one doing a stratified cross-validation in `num_folds`
     folds. Saves the training and classification information in the `output_file_descriptor` file.
     """
@@ -210,11 +247,18 @@ def run(dataset_name, train_dataset, criterion, min_num_samples_allowed, max_dep
             trial_number + 1, starting_seed + trial_number))
         print()
 
+        # Resets the Monte Carlo caches for each tree trained.
+        monte_carlo.clean_caches()
+
         if seed is None:
             random.seed(RANDOM_SEEDS[trial_number + starting_seed - 1])
             np.random.seed(RANDOM_SEEDS[trial_number + starting_seed - 1])
 
-        tree = decision_tree.DecisionTree(criterion=criterion)
+        tree = decision_tree.DecisionTree(criterion=criterion,
+                                          is_monte_carlo_criterion=use_monte_carlo,
+                                          upper_p_value_threshold=upper_p_value_threshold,
+                                          lower_p_value_threshold=lower_p_value_threshold,
+                                          prob_monte_carlo=prob_monte_carlo)
 
         start_time = timeit.default_timer()
         (_,
@@ -270,6 +314,8 @@ def run(dataset_name, train_dataset, criterion, min_num_samples_allowed, max_dep
                         decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS,
                         use_chi_sq_test, max_p_value_chi_sq,
                         decision_tree.MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE,
+                        use_monte_carlo, is_random_ordering, upper_p_value_threshold,
+                        lower_p_value_threshold, prob_monte_carlo,
                         np.mean(num_valid_nominal_attributes_in_root), total_time_taken,
                         trivial_accuracy_percentage, accuracy_with_missing_values,
                         accuracy_without_missing_values, num_unkown, percentage_unkown,
@@ -286,6 +332,8 @@ def save_trial_info(dataset_name, num_total_samples, trial_number, criterion_nam
                     max_depth, num_folds, is_stratified, min_num_samples_allowed,
                     use_min_samples_second_largest_class, min_samples_second_largest_class,
                     use_chi_sq_test, max_p_value_chi_sq, min_num_second_most_freq_value,
+                    use_monte_carlo, is_random_ordering, upper_p_value_threshold,
+                    lower_p_value_threshold, prob_monte_carlo,
                     avg_num_valid_nominal_attributes_in_root, total_time_taken,
                     trivial_accuracy_percentage, accuracy_with_missing_values,
                     accuracy_without_missing_values, num_unkown, percentage_unkown,
@@ -311,6 +359,12 @@ def save_trial_info(dataset_name, num_total_samples, trial_number, criterion_nam
                  str(use_chi_sq_test),
                  str(max_p_value_chi_sq),
                  str(min_num_second_most_freq_value),
+
+                 str(use_monte_carlo),
+                 str(is_random_ordering),
+                 str(upper_p_value_threshold),
+                 str(lower_p_value_threshold),
+                 str(prob_monte_carlo),
 
                  str(avg_num_valid_nominal_attributes_in_root),
 

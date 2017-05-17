@@ -82,12 +82,15 @@ def main(experiment_config):
                 "monte carlo parameters"]["lower p-value threshold"]
             prob_monte_carlo = experiment_config["prunning parameters"][
                 "monte carlo parameters"]["prob monte carlo"]
+            use_one_attrib_per_num_values = experiment_config["prunning parameters"][
+                "monte carlo parameters"]["use one attrib per num values"]
         else:
             use_monte_carlo = False
             is_random_ordering = None
             upper_p_value_threshold = None
             lower_p_value_threshold = None
             prob_monte_carlo = None
+            use_one_attrib_per_num_values = None
 
         if experiment_config["use all datasets"]:
             datasets_configs = dataset.load_all_configs(experiment_config["datasets basepath"])
@@ -122,6 +125,7 @@ def main(experiment_config):
                         upper_p_value_threshold=upper_p_value_threshold,
                         lower_p_value_threshold=lower_p_value_threshold,
                         prob_monte_carlo=prob_monte_carlo,
+                        use_one_attrib_per_num_values=use_one_attrib_per_num_values,
                         output_file_descriptor=fout,
                         output_split_char=',')
         else:
@@ -153,6 +157,7 @@ def main(experiment_config):
                         upper_p_value_threshold=upper_p_value_threshold,
                         lower_p_value_threshold=lower_p_value_threshold,
                         prob_monte_carlo=prob_monte_carlo,
+                        use_one_attrib_per_num_values=use_one_attrib_per_num_values,
                         output_file_descriptor=fout,
                         output_split_char=',')
 
@@ -182,11 +187,13 @@ def init_raw_output_csv(raw_output_file_descriptor, output_split_char=','):
                    'U [between 0 and 1]',
                    'L [between 0 and 1]',
                    'prob_monte_carlo [between 0 and 1]',
+                   'Use Only One Attribute per Number of Values?'
+
+                   'Number of Valid Attributes (m)',
+                   'Number of Valid Attributes with Different Number of Values (m_diff)',
 
                    'Number of Tests (t)',
                    'Number of Fails Allowed (f - 1)',
-
-                   'Number of Valid Attributes (m)',
 
                    r'Theoretical Number of Tests (E_\{theo\})',
                    r'Theoretical Number of Tests per Attribute (E_\{theo\}/m)',
@@ -238,7 +245,7 @@ def get_criteria(criteria_names_list):
 def run(dataset_name, train_dataset, num_training_samples, criterion, min_num_samples_allowed,
         max_depth, num_trials, starting_seed, use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
         is_random_ordering, upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo,
-        output_file_descriptor, output_split_char=',', seed=None):
+        use_one_attrib_per_num_values, output_file_descriptor, output_split_char=',', seed=None):
     """Runs `num_trials` experiments, each one randomly selecting `num_training_samples` valid
     samples to use for training and testing the tree in the rest of the dataset. Saves the training
     and classification information in the `output_file_descriptor` file.
@@ -264,11 +271,13 @@ def run(dataset_name, train_dataset, num_training_samples, criterion, min_num_sa
         # Resets the Monte Carlo caches for each tree trained.
         monte_carlo.clean_caches()
 
-        tree = decision_tree.DecisionTree(criterion=criterion,
-                                          is_monte_carlo_criterion=use_monte_carlo,
-                                          upper_p_value_threshold=upper_p_value_threshold,
-                                          lower_p_value_threshold=lower_p_value_threshold,
-                                          prob_monte_carlo=prob_monte_carlo)
+        tree = decision_tree.DecisionTree(
+            criterion=criterion,
+            is_monte_carlo_criterion=use_monte_carlo,
+            upper_p_value_threshold=upper_p_value_threshold,
+            lower_p_value_threshold=lower_p_value_threshold,
+            prob_monte_carlo=prob_monte_carlo,
+            use_one_attrib_per_num_values=use_one_attrib_per_num_values)
 
         # First let's train the tree and save the training information
         start_time = timeit.default_timer()
@@ -306,25 +315,34 @@ def run(dataset_name, train_dataset, num_training_samples, criterion, min_num_sa
                                              max_p_value_chi_sq=max_p_value_chi_sq)
             total_time_taken = timeit.default_timer() - start_time
 
-
-
         root_node = tree.get_root_node()
         num_tests = root_node.num_tests
         num_fails_allowed = root_node.num_fails_allowed
         num_valid_nominal_attributes = sum(root_node.valid_nominal_attribute)
+        num_valid_nominal_attributes_diff = root_node.num_valid_nominal_attributes_diff
         theoretical_e = root_node.total_expected_num_tests
-        theoretical_e_over_m = root_node.total_expected_num_tests / num_valid_nominal_attributes
+        if use_one_attrib_per_num_values:
+            theoretical_e_over_m = (root_node.total_expected_num_tests
+                                    / num_valid_nominal_attributes_diff)
+        else:
+            theoretical_e_over_m = root_node.total_expected_num_tests / num_valid_nominal_attributes
 
         if root_node.node_split is not None:
             e = root_node.node_split.total_num_tests_needed
-            e_over_m = root_node.node_split.total_num_tests_needed / num_valid_nominal_attributes
+            if use_one_attrib_per_num_values:
+                e_over_m = (root_node.node_split.total_num_tests_needed
+                            / num_valid_nominal_attributes_diff)
+            else:
+                e_over_m = (root_node.node_split.total_num_tests_needed
+                            / num_valid_nominal_attributes)
             accepted_position = root_node.node_split.accepted_position
         else:
-            e = num_tests * num_valid_nominal_attributes
+            if use_one_attrib_per_num_values:
+                e = num_tests * num_valid_nominal_attributes_diff
+            else:
+                e = num_tests * num_valid_nominal_attributes
             e_over_m = num_tests
             accepted_position = None
-
-
 
         time_taken_num_tests_fails = root_node.get_subtree_time_num_tests_fails()
         time_taken_expected_tests = root_node.get_subtree_time_expected_tests()
@@ -364,8 +382,9 @@ def run(dataset_name, train_dataset, num_training_samples, criterion, min_num_sa
                         use_chi_sq_test, max_p_value_chi_sq,
                         decision_tree.MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE,
                         use_monte_carlo, is_random_ordering, upper_p_value_threshold,
-                        lower_p_value_threshold, prob_monte_carlo, num_tests, num_fails_allowed,
-                        num_valid_nominal_attributes, theoretical_e, theoretical_e_over_m, e,
+                        lower_p_value_threshold, prob_monte_carlo, use_one_attrib_per_num_values,
+                        num_valid_nominal_attributes, num_valid_nominal_attributes_diff,
+                        num_tests, num_fails_allowed, theoretical_e, theoretical_e_over_m, e,
                         e_over_m, accepted_position, total_time_taken, time_taken_tree,
                         time_taken_prunning, time_taken_num_tests_fails, time_taken_expected_tests,
                         trivial_accuracy, accuracy_with_missing_values,
@@ -379,8 +398,9 @@ def save_trial_info(dataset_name, num_total_samples, num_training_samples, trial
                     use_min_samples_second_largest_class, min_samples_second_largest_class,
                     use_chi_sq_test, max_p_value_chi_sq, min_num_second_most_freq_value,
                     use_monte_carlo, is_random_ordering, upper_p_value_threshold,
-                    lower_p_value_threshold, prob_monte_carlo, num_tests, num_fails_allowed,
-                    num_valid_nominal_attributes, theoretical_e, theoretical_e_over_m, e, e_over_m,
+                    lower_p_value_threshold, prob_monte_carlo, use_one_attrib_per_num_values,
+                    num_valid_nominal_attributes, num_valid_nominal_attributes_diff, num_tests,
+                    num_fails_allowed, theoretical_e, theoretical_e_over_m, e, e_over_m,
                     accepted_position, total_time_taken, time_taken_tree,
                     time_taken_prunning, time_taken_num_tests_fails, time_taken_expected_tests,
                     trivial_accuracy_percentage, accuracy_with_missing_values,
@@ -410,11 +430,13 @@ def save_trial_info(dataset_name, num_total_samples, num_training_samples, trial
                  str(upper_p_value_threshold),
                  str(lower_p_value_threshold),
                  str(prob_monte_carlo),
+                 str(use_one_attrib_per_num_values),
+
+                 str(num_valid_nominal_attributes),
+                 str(num_valid_nominal_attributes_diff),
 
                  str(num_tests),
                  str(num_fails_allowed),
-
-                 str(num_valid_nominal_attributes),
 
                  str(theoretical_e),
                  str(theoretical_e_over_m),

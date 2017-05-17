@@ -9,16 +9,14 @@
         "Gain Ratio"
     ],
 
-    "output folder": "./outputs/multiple levels experiment/monte carlo",
+    "output folder": "./outputs/single level experiment/monte carlo",
 
     "num trials": 5,
-    "calculate t-test on accuracy": true,
-    "t-test single-sided p-value": 0.1,
+    "calculate t-test on accuracy": false,
 
-    "max depth": 5,
-    "use cross-validation": true,
-    "num folds": 10,
-    "is stratified": true,
+    "max depth": 1,
+    "use cross-validation": false,
+    "num training samples": 10,
 
     "prunning parameters": {
         "use chi-sq test": false,
@@ -28,11 +26,11 @@
             "upper p-value threshold": 0.4,
             "lower p-value threshold": 0.1,
             "prob monte carlo": 0.95,
-            "use random order": [false, true]
+            "use random order": false,
+            "use one attrib per num values": false
         },
 
         "min num samples allowed": [1],
-        "use second most freq class min samples": true,
-        "second most freq class min samples": 40
+        "use second most freq class min samples": false
     }
 }

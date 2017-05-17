@@ -78,12 +78,15 @@ def main(experiment_config):
                 "monte carlo parameters"]["lower p-value threshold"]
             prob_monte_carlo = experiment_config["prunning parameters"][
                 "monte carlo parameters"]["prob monte carlo"]
+            use_one_attrib_per_num_values = experiment_config["prunning parameters"][
+                "monte carlo parameters"]["use one attrib per num values"]
         else:
             use_monte_carlo = False
             is_random_ordering = None
             upper_p_value_threshold = None
             lower_p_value_threshold = None
             prob_monte_carlo = None
+            use_one_attrib_per_num_values = None
 
         if experiment_config["use all datasets"]:
             datasets_configs = dataset.load_all_configs(experiment_config["datasets basepath"])
@@ -123,6 +126,7 @@ def main(experiment_config):
                         upper_p_value_threshold=upper_p_value_threshold,
                         lower_p_value_threshold=lower_p_value_threshold,
                         prob_monte_carlo=prob_monte_carlo,
+                        use_one_attrib_per_num_values=use_one_attrib_per_num_values,
                         output_file_descriptor=fout,
                         output_split_char=',')
         else:
@@ -151,6 +155,7 @@ def main(experiment_config):
                         upper_p_value_threshold=upper_p_value_threshold,
                         lower_p_value_threshold=lower_p_value_threshold,
                         prob_monte_carlo=prob_monte_carlo,
+                        use_one_attrib_per_num_values=use_one_attrib_per_num_values,
                         output_file_descriptor=fout,
                         output_split_char=',')
 
@@ -180,8 +185,11 @@ def init_raw_output_csv(raw_output_file_descriptor, output_split_char=','):
                    'U [between 0 and 1]',
                    'L [between 0 and 1]',
                    'prob_monte_carlo [between 0 and 1]',
+                   'Use Only One Attribute per Number of Values?',
 
                    'Average Number of Valid Attributes in Root Node (m)',
+                   'Average Number of Valid Attributes in Root Node with Different Number of'
+                   ' Values (m_diff)',
 
                    'Total Time Taken for Cross-Validation [s]',
 
@@ -233,7 +241,8 @@ def get_criteria(criteria_names_list):
 def run(dataset_name, train_dataset, criterion, min_num_samples_allowed, max_depth, num_trials,
         starting_seed, num_folds, is_stratified, use_chi_sq_test, max_p_value_chi_sq,
         use_monte_carlo, is_random_ordering, upper_p_value_threshold, lower_p_value_threshold,
-        prob_monte_carlo, output_file_descriptor, output_split_char=',', seed=None):
+        prob_monte_carlo, use_one_attrib_per_num_values, output_file_descriptor,
+        output_split_char=',', seed=None):
     """Runs `num_trials` experiments, each one doing a stratified cross-validation in `num_folds`
     folds. Saves the training and classification information in the `output_file_descriptor` file.
     """
@@ -254,11 +263,13 @@ def run(dataset_name, train_dataset, criterion, min_num_samples_allowed, max_dep
             random.seed(RANDOM_SEEDS[trial_number + starting_seed - 1])
             np.random.seed(RANDOM_SEEDS[trial_number + starting_seed - 1])
 
-        tree = decision_tree.DecisionTree(criterion=criterion,
-                                          is_monte_carlo_criterion=use_monte_carlo,
-                                          upper_p_value_threshold=upper_p_value_threshold,
-                                          lower_p_value_threshold=lower_p_value_threshold,
-                                          prob_monte_carlo=prob_monte_carlo)
+        tree = decision_tree.DecisionTree(
+            criterion=criterion,
+            is_monte_carlo_criterion=use_monte_carlo,
+            upper_p_value_threshold=upper_p_value_threshold,
+            lower_p_value_threshold=lower_p_value_threshold,
+            prob_monte_carlo=prob_monte_carlo,
+            use_one_attrib_per_num_values=use_one_attrib_per_num_values)
 
         start_time = timeit.default_timer()
         (_,
@@ -276,7 +287,8 @@ def run(dataset_name, train_dataset, criterion, min_num_samples_allowed, max_dep
          num_valid_nominal_attributes_in_root,
          num_values_root_attribute_list,
          num_trivial_splits,
-         trivial_accuracy_percentage) = tree.cross_validate(
+         trivial_accuracy_percentage,
+         num_valid_nominal_attributes_diff_in_root_per_fold) = tree.cross_validate(
              curr_dataset=train_dataset,
              num_folds=num_folds,
              max_depth=max_depth,
@@ -294,7 +306,6 @@ def run(dataset_name, train_dataset, criterion, min_num_samples_allowed, max_dep
                                                / (train_dataset.num_samples - num_unkown))
         except ZeroDivisionError:
             accuracy_without_missing_values = None
-
         percentage_unkown = 100.0 * num_unkown / train_dataset.num_samples
 
         if num_values_root_attribute_list:
@@ -315,9 +326,10 @@ def run(dataset_name, train_dataset, criterion, min_num_samples_allowed, max_dep
                         use_chi_sq_test, max_p_value_chi_sq,
                         decision_tree.MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE,
                         use_monte_carlo, is_random_ordering, upper_p_value_threshold,
-                        lower_p_value_threshold, prob_monte_carlo,
-                        np.mean(num_valid_nominal_attributes_in_root), total_time_taken,
-                        trivial_accuracy_percentage, accuracy_with_missing_values,
+                        lower_p_value_threshold, prob_monte_carlo, use_one_attrib_per_num_values,
+                        np.mean(num_valid_nominal_attributes_in_root),
+                        np.mean(num_valid_nominal_attributes_diff_in_root_per_fold),
+                        total_time_taken, trivial_accuracy_percentage, accuracy_with_missing_values,
                         accuracy_without_missing_values, num_unkown, percentage_unkown,
                         avg_num_values_root_attribute, max_num_values_root_attribute,
                         min_num_values_root_attribute, num_trivial_splits,
@@ -333,8 +345,9 @@ def save_trial_info(dataset_name, num_total_samples, trial_number, criterion_nam
                     use_min_samples_second_largest_class, min_samples_second_largest_class,
                     use_chi_sq_test, max_p_value_chi_sq, min_num_second_most_freq_value,
                     use_monte_carlo, is_random_ordering, upper_p_value_threshold,
-                    lower_p_value_threshold, prob_monte_carlo,
-                    avg_num_valid_nominal_attributes_in_root, total_time_taken,
+                    lower_p_value_threshold, prob_monte_carlo, use_one_attrib_per_num_values,
+                    avg_num_valid_nominal_attributes_in_root,
+                    avg_num_valid_nominal_attributes_diff_in_root, total_time_taken,
                     trivial_accuracy_percentage, accuracy_with_missing_values,
                     accuracy_without_missing_values, num_unkown, percentage_unkown,
                     avg_num_values_root_attribute, max_num_values_root_attribute,
@@ -365,8 +378,10 @@ def save_trial_info(dataset_name, num_total_samples, trial_number, criterion_nam
                  str(upper_p_value_threshold),
                  str(lower_p_value_threshold),
                  str(prob_monte_carlo),
+                 str(use_one_attrib_per_num_values),
 
                  str(avg_num_valid_nominal_attributes_in_root),
+                 str(avg_num_valid_nominal_attributes_diff_in_root),
 
                  str(total_time_taken),
 

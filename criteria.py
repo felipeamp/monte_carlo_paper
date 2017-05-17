@@ -17,6 +17,11 @@ import numpy as np
 #: Whether Monte Carlo Framework should order attributes randomly or in decreasing criterion value.
 ORDER_RANDOMLY = False
 
+#: Whether Monte Carlo Framework should only test the best attribute for each number of values. Only
+#: works when `ORDER_RANDOMLY` is `True`.
+USE_ONE_ATTRIB_PER_NUM_VALUES = False
+
+
 class Criterion(object):
     """Abstract base class for every criterion.
     """
@@ -112,6 +117,15 @@ class GiniGain(Criterion):
                 random.shuffle(best_splits_per_attrib)
             else:
                 best_splits_per_attrib.sort(key=lambda x: -x[2])
+                if USE_ONE_ATTRIB_PER_NUM_VALUES:
+                    best_splits_per_attrib_clean = []
+                    num_values_seen = set()
+                    for curr_split in best_splits_per_attrib:
+                        num_values = len(curr_split[1])
+                        if num_values not in num_values_seen:
+                            num_values_seen.add(num_values)
+                            best_splits_per_attrib_clean.append(curr_split)
+                    best_splits_per_attrib = best_splits_per_attrib_clean
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
@@ -188,8 +202,6 @@ class GiniGain(Criterion):
                 num_valid_samples,
                 values_num_samples)
 
-            # TODO: check if should use the original_gini instead of the one for the
-            # random contingency table.
             new_class_index_num_samples = np.sum(random_contingency_table, axis=0).tolist()
             father_gini_index = cls._calculate_gini_index(num_valid_samples,
                                                           new_class_index_num_samples)
@@ -300,6 +312,15 @@ class Twoing(Criterion):
                 random.shuffle(best_splits_per_attrib)
             else:
                 best_splits_per_attrib.sort(key=lambda x: -x[2])
+                if USE_ONE_ATTRIB_PER_NUM_VALUES:
+                    best_splits_per_attrib_clean = []
+                    num_values_seen = set()
+                    for curr_split in best_splits_per_attrib:
+                        num_values = len(values_seen_per_attrib[curr_split[0]])
+                        if num_values not in num_values_seen:
+                            num_values_seen.add(num_values)
+                            best_splits_per_attrib_clean.append(curr_split)
+                    best_splits_per_attrib = best_splits_per_attrib_clean
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
@@ -629,6 +650,15 @@ class GainRatio(Criterion):
                 random.shuffle(best_splits_per_attrib)
             else:
                 best_splits_per_attrib.sort(key=lambda x: -x[2])
+                if USE_ONE_ATTRIB_PER_NUM_VALUES:
+                    best_splits_per_attrib_clean = []
+                    num_values_seen = set()
+                    for curr_split in best_splits_per_attrib:
+                        num_values = len(curr_split[1])
+                        if num_values not in num_values_seen:
+                            num_values_seen.add(num_values)
+                            best_splits_per_attrib_clean.append(curr_split)
+                    best_splits_per_attrib = best_splits_per_attrib_clean
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
@@ -725,8 +755,6 @@ class GainRatio(Criterion):
                 values_num_samples)
             new_class_index_num_samples = np.sum(random_contingency_table, axis=0).tolist()
 
-            # TODO: check if should use the original information instead of the one for the
-            # random contingency table.
             original_information = cls._calculate_information(new_class_index_num_samples,
                                                               num_valid_samples)
             curr_gain_ratio = cls._calculate_gain_ratio(

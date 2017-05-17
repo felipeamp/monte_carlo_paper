@@ -13,6 +13,7 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold, KFold
 from scipy.stats import chi2
 
+import criteria
 import monte_carlo
 
 
@@ -34,7 +35,8 @@ class DecisionTree(object):
         This class' state should be accessed only indirectly, through its methods.
     """
     def __init__(self, criterion, is_monte_carlo_criterion=False, upper_p_value_threshold=None,
-                 lower_p_value_threshold=None, prob_monte_carlo=None):
+                 lower_p_value_threshold=None, prob_monte_carlo=None,
+                 use_one_attrib_per_num_values=None):
         """Initializes a DecisionTree instance with the given arguments.
 
         Args:
@@ -51,14 +53,19 @@ class DecisionTree(object):
                 p-value smaller than `lower_p_value_threshold` and rejecting an attribute with
                 p-value greater than `upper_p_value_threshold` for our Monte Carlo framework.
                 Defaults to `None`.
+            use_one_attrib_per_num_values (bool, optional): indicates wether we should do the monte
+                carlo procedure in all valid attributes or only in the best attribute with each
+                number of values. Defaults to `None`.
         """
         self._criterion = criterion
-        self._dataset = None
+        self._curr_dataset = None
         self._root_node = None
         self._is_monte_carlo_criterion = is_monte_carlo_criterion
         self._upper_p_value_threshold = upper_p_value_threshold
         self._lower_p_value_threshold = lower_p_value_threshold
         self._prob_monte_carlo = prob_monte_carlo
+        self._use_one_attrib_per_num_values = use_one_attrib_per_num_values
+        criteria.USE_ONE_ATTRIB_PER_NUM_VALUES = self._use_one_attrib_per_num_values
 
     def get_root_node(self):
         """Returns the TreeNode at the root of the tree. Might be None.
@@ -79,9 +86,9 @@ class DecisionTree(object):
         """Returns the accuracy obtained by classifying all test samples in the most common class
         among training samples. Must be called after training the tree.
         """
-        num_correct = sum(
-            self._dataset.sample_class[curr_sample_index] == self._root_node.most_common_int_class
-            for curr_sample_index in test_samples_indices)
+        num_correct = sum(self._curr_dataset.sample_class[curr_sample_index]
+                          == self._root_node.most_common_int_class
+                          for curr_sample_index in test_samples_indices)
         return 100.0 * num_correct / len(test_samples_indices)
 
     def _classify_sample(self, sample, sample_key):
@@ -160,7 +167,7 @@ class DecisionTree(object):
         prunes the trivial subtrees.
 
         Args:
-            dataset (Dataset): dataset containing the samples used for training.
+            curr_dataset (Dataset): dataset containing the samples used for training.
             training_samples_indices (:obj:'list' of 'int'): list containing the indices of samples
                 of `dataset` used for training.
             max_depth (int): maximum tree depth allowed. Zero means the root is a leaf.
@@ -187,20 +194,22 @@ class DecisionTree(object):
                 - time_taken_prunning (float): time spent prunning the trained tree.
                 - nodes_prunned (int): number of nodes prunned.
         """
-        self._dataset = dataset
+        self._curr_dataset = curr_dataset
         print('Starting tree training...')
-        self._root_node = TreeNode(curr_dataset,
-                                   training_samples_indices,
-                                   dataset.valid_nominal_attribute[:],
-                                   max_depth,
-                                   min_samples_per_node,
-                                   use_stop_conditions,
-                                   max_p_value_chi_sq,
-                                   is_monte_carlo_criterion=self._is_monte_carlo_criterion,
-                                   upper_p_value_threshold=self._upper_p_value_threshold,
-                                   lower_p_value_threshold=self._lower_p_value_threshold,
-                                   prob_monte_carlo=self._prob_monte_carlo,
-                                   calculate_expected_tests=calculate_expected_tests)
+        self._root_node = TreeNode(
+            curr_dataset,
+            training_samples_indices,
+            curr_dataset.valid_nominal_attribute[:],
+            max_depth,
+            min_samples_per_node,
+            use_stop_conditions,
+            max_p_value_chi_sq,
+            is_monte_carlo_criterion=self._is_monte_carlo_criterion,
+            upper_p_value_threshold=self._upper_p_value_threshold,
+            lower_p_value_threshold=self._lower_p_value_threshold,
+            prob_monte_carlo=self._prob_monte_carlo,
+            use_one_attrib_per_num_values=self._use_one_attrib_per_num_values,
+            calculate_expected_tests=calculate_expected_tests)
         self._root_node.create_subtree(self._criterion)
         print('Starting prunning trivial subtrees...')
         start_time = timeit.default_timer()
@@ -272,11 +281,11 @@ class DecisionTree(object):
                                                             max_p_value_chi_sq,
                                                             calculate_expected_tests)
         max_depth = self.get_root_node().get_max_depth()
-        return (self._classify_samples(self._dataset.samples,
-                                       self._dataset.sample_class,
-                                       self._dataset.sample_costs,
+        return (self._classify_samples(self._curr_dataset.samples,
+                                       self._curr_dataset.sample_class,
+                                       self._curr_dataset.sample_costs,
                                        validation_sample_indices,
-                                       self._dataset.sample_index_to_key),
+                                       self._curr_dataset.sample_index_to_key),
                 max_depth,
                 time_taken_prunning,
                 num_nodes_prunned)
@@ -344,7 +353,9 @@ class DecisionTree(object):
                 - list containing the number of nodes per fold, after prunning;
                 - list containing the number of valid attributes in root node in each fold;
                 - Accuracy percentage obtained by classifying, in each fold, the test samples in the
-                most common class among training samples.
+                most common class among training samples;
+                - list containing the number of valid attributes with different number of values in
+                root node in each fold.
         """
 
         classifications = [0] * curr_dataset.num_samples
@@ -363,6 +374,7 @@ class DecisionTree(object):
         time_taken_prunning_per_fold = []
         num_nodes_prunned_per_fold = []
         num_correct_trivial_classifications = 0
+        num_valid_nominal_attributes_diff_in_root_per_fold = []
 
         fold_count = 0
 
@@ -410,6 +422,8 @@ class DecisionTree(object):
                 num_nodes_per_fold.append(self.get_root_node().get_num_nodes())
                 num_valid_nominal_attributes_in_root_per_fold.append(
                     sum(self._root_node.valid_nominal_attribute))
+                num_valid_nominal_attributes_diff_in_root_per_fold.append(
+                    self._root_node.num_valid_nominal_attributes_diff)
                 try:
                     root_node_split_attrib = self.get_root_node().node_split.separation_attrib_index
                     if curr_dataset.valid_nominal_attribute[root_node_split_attrib]:
@@ -469,6 +483,8 @@ class DecisionTree(object):
                 num_nodes_per_fold.append(self.get_root_node().get_num_nodes())
                 num_valid_nominal_attributes_in_root_per_fold.append(
                     sum(self._root_node.valid_nominal_attribute))
+                num_valid_nominal_attributes_diff_in_root_per_fold.append(
+                    self._root_node.num_valid_nominal_attributes_diff)
                 try:
                     root_node_split_attrib = self.get_root_node().node_split.separation_attrib_index
                     if curr_dataset.valid_nominal_attribute[root_node_split_attrib]:
@@ -518,7 +534,8 @@ class DecisionTree(object):
                  num_valid_nominal_attributes_in_root_per_fold,
                  num_values_root_attribute_list,
                  num_trivial_splits,
-                 100.0 * num_correct_trivial_classifications / curr_dataset.num_samples)
+                 100.0 * num_correct_trivial_classifications / curr_dataset.num_samples,
+                 num_valid_nominal_attributes_diff_in_root_per_fold)
 
     def test(self, test_sample_indices):
         """Tests the (already trained) tree over samples from the same dataset as the
@@ -550,11 +567,11 @@ class DecisionTree(object):
         if self._root_node is None:
             print('Decision tree must be trained before testing.')
             sys.exit(1)
-        return self._classify_samples(self._dataset.samples,
-                                      self._dataset.sample_class,
-                                      self._dataset.sample_costs,
+        return self._classify_samples(self._curr_dataset.samples,
+                                      self._curr_dataset.sample_class,
+                                      self._curr_dataset.sample_costs,
                                       test_sample_indices,
-                                      self._dataset.sample_index_to_key)
+                                      self._curr_dataset.sample_index_to_key)
 
     def test_from_csv(self, test_dataset_csv_filepath, key_attrib_index, class_attrib_index,
                       split_char, missing_value_string):
@@ -587,19 +604,19 @@ class DecisionTree(object):
                     i-th sample when an unkown value occurred.
         """
 
-        if self._root_node is None or self._dataset is None:
+        if self._root_node is None or self._curr_dataset is None:
             print('Decision tree must be trained before testing.')
             sys.exit(1)
-        self._dataset.load_test_set_from_csv(test_dataset_csv_filepath,
-                                             key_attrib_index,
-                                             class_attrib_index,
-                                             split_char,
-                                             missing_value_string)
-        return self._classify_samples(self._dataset.test_samples,
-                                      self._dataset.test_sample_class,
-                                      self._dataset.test_sample_costs,
-                                      list(range(len(self._dataset.test_sample_index_to_key))),
-                                      self._dataset.test_sample_index_to_key)
+        self._curr_dataset.load_test_set_from_csv(test_dataset_csv_filepath,
+                                                  key_attrib_index,
+                                                  class_attrib_index,
+                                                  split_char,
+                                                  missing_value_string)
+        return self._classify_samples(self._curr_dataset.test_samples,
+                                      self._curr_dataset.test_sample_class,
+                                      self._curr_dataset.test_sample_costs,
+                                      list(range(len(self._curr_dataset.test_sample_index_to_key))),
+                                      self._curr_dataset.test_sample_index_to_key)
 
     def save_tree(self, filepath=None):
         """Saves the tree information: nodes, attributes used to split each one, values to each
@@ -620,18 +637,17 @@ class DecisionTree(object):
         def _aux_print_split(file_object, tree_node, curr_depth):
             # TESTED!
             if tree_node.is_leaf:
-                leaf_class_string = self._dataset.class_int_to_name[
+                leaf_class_string = self._curr_dataset.class_int_to_name[
                     tree_node.most_common_int_class]
                 string_leaf = '|' * curr_depth + 'CLASS: ' + leaf_class_string
                 print(string_leaf, file=file_object)
             else:
                 attrib_index = tree_node.node_split.separation_attrib_index
-                attrib_name = self._dataset.attrib_names[attrib_index]
-                mid_point = tree_node.node_split.mid_point
+                attrib_name = self._curr_dataset.attrib_names[attrib_index]
                 for split_values, child_node in zip(tree_node.node_split.splits_values,
                                                     tree_node.nodes):
                     curr_string_values = sorted(
-                        [self._dataset.attrib_int_to_value[attrib_index][int_value]
+                        [self._curr_dataset.attrib_int_to_value[attrib_index][int_value]
                          for int_value in split_values])
                     print(_aux_print_nominal_string(attrib_name,
                                                     curr_string_values,
@@ -668,11 +684,13 @@ class TreeNode(object):
             number of times a sample has value i in this attribute and training dataset). Used by
             many criteria when calculating the optimal split. Note that, for invalid attributes, the
             entry is a tuple with empty lists ([], []).
-        dataset (Dataset): dataset containing the training samples.
+        curr_dataset (Dataset): dataset containing the training samples.
         valid_samples_indices (:obj:'list' of 'int'): contains the indices of the valid training
             samples.
         valid_nominal_attribute (:obj:'list' of 'bool'): list where the i-th entry indicates wether
             the i-th attribute from the dataset is valid and nominal or not.
+        num_valid_nominal_attributes_diff ('int'): number of attributes with different number of
+            values.
         num_valid_samples (int): number of training samples in this TreeNode.
         class_index_num_samples (:obj:'list' of 'int'): list where the i-th entry indicates the
             number of samples having class i.
@@ -685,6 +703,9 @@ class TreeNode(object):
         prob_monte_carlo (float): the probability of accepting an attribute with p-value smaller
             than `lower_p_value_threshold` and rejecting an attribute with p-value greater than
             `upper_p_value_threshold` for our Monte Carlo framework.
+        use_one_attrib_per_num_values (bool):  indicates wether we should do the monte carlo
+            procedure in all valid attributes or only in the best attribute with each number of
+            values.
         calculate_expected_tests (bool): indicates wether we should calculate the expected number of
             tests done by our monte carlo framework.
         total_expected_num_tests (float): total number of expected tests to be done at this node, in
@@ -694,15 +715,16 @@ class TreeNode(object):
         time_expected_tests (float): time taken to calculate the value of
             `total_expected_num_tests`, in seconds.
     """
-    def __init__(self, dataset, valid_samples_indices, valid_nominal_attribute,
+    def __init__(self, curr_dataset, valid_samples_indices, valid_nominal_attribute,
                  max_depth_remaining, min_samples_per_node, use_stop_conditions=False,
                  max_p_value_chi_sq=0.1, is_monte_carlo_criterion=False,
                  upper_p_value_threshold=None, lower_p_value_threshold=None,
-                 prob_monte_carlo=None, calculate_expected_tests=False):
+                 prob_monte_carlo=None, use_one_attrib_per_num_values=None,
+                 calculate_expected_tests=False):
         """Initializes a TreeNode instance with the given arguments.
 
         Args:
-            dataset (Dataset): dataset of samples used for training/split generation.
+            curr_dataset (Dataset): dataset of samples used for training/split generation.
             valid_samples_indices (:obj:'list' of 'int'): indices of samples that should be used for
                 training at this node.
             valid_nominal_attribute (:obj:'list' of 'bool'): the i-th entry informs wether the i-th
@@ -738,6 +760,9 @@ class TreeNode(object):
                 p-value smaller than `lower_p_value_threshold` and rejecting an attribute with
                 p-value greater than `upper_p_value_threshold` for our Monte Carlo framework.
                 Defaults to `None`.
+            use_one_attrib_per_num_values (bool, optional): indicates wether we should do the monte
+                carlo procedure in all valid attributes or only in the best attribute with each
+                number of values. Defaults to `None`.
             calculate_expected_tests (bool, optional): indicates wether we should calculate the
                 expected number of tests done by our monte carlo framework. Defaults to `False`.
         """
@@ -749,6 +774,7 @@ class TreeNode(object):
         self.upper_p_value_threshold = upper_p_value_threshold
         self.lower_p_value_threshold = lower_p_value_threshold
         self.prob_monte_carlo = prob_monte_carlo
+        self.use_one_attrib_per_num_values = use_one_attrib_per_num_values
 
         self.num_tests = 0
         self.num_fails_allowed = 0
@@ -764,26 +790,26 @@ class TreeNode(object):
         self.nodes = []
         self.contingency_tables = None
 
-        self.dataset = dataset
+        self.curr_dataset = curr_dataset
         self.valid_samples_indices = valid_samples_indices
         # Note that self.valid_nominal_attribute might be different from
-        # self.dataset.valid_nominal_attribute when use_stop_conditions == True.
+        # self.curr_dataset.valid_nominal_attribute when use_stop_conditions == True.
         self.valid_nominal_attribute = valid_nominal_attribute
+        self.num_valid_nominal_attributes_diff = None
 
         self.num_valid_samples = len(valid_samples_indices)
-        self.class_index_num_samples = [0] * dataset.num_classes
+        self.class_index_num_samples = [0] * curr_dataset.num_classes
         self.most_common_int_class = None
         self.number_non_empty_classes = 0
 
         # Fill self.class_index_num_samples
         for sample_index in valid_samples_indices:
             self.class_index_num_samples[
-                dataset.sample_class[sample_index]] += 1
+                curr_dataset.sample_class[sample_index]] += 1
 
         self.most_common_int_class = self.class_index_num_samples.index(
             max(self.class_index_num_samples))
         self._calculate_contingency_tables()
-
 
     def _calculate_contingency_tables(self):
         self.contingency_tables = [] # vector of pairs (attrib_contingency_table,
@@ -794,14 +820,14 @@ class TreeNode(object):
                 self.contingency_tables.append(([], []))
                 continue
 
-            attrib_num_values = len(self.dataset.attrib_int_to_value[attrib_index])
-            curr_contingency_table = np.zeros((attrib_num_values, self.dataset.num_classes),
+            attrib_num_values = len(self.curr_dataset.attrib_int_to_value[attrib_index])
+            curr_contingency_table = np.zeros((attrib_num_values, self.curr_dataset.num_classes),
                                               dtype=int)
             curr_values_num_samples = np.zeros((attrib_num_values), dtype=int)
 
             for sample_index in self.valid_samples_indices:
-                curr_sample_value = self.dataset.samples[sample_index][attrib_index]
-                curr_sample_class = self.dataset.sample_class[sample_index]
+                curr_sample_value = self.curr_dataset.samples[sample_index][attrib_index]
+                curr_sample_class = self.curr_dataset.sample_class[sample_index]
                 curr_contingency_table[curr_sample_value][curr_sample_class] += 1
                 curr_values_num_samples[curr_sample_value] += 1
 
@@ -854,6 +880,23 @@ class TreeNode(object):
             self.contingency_tables[attrib_index][0],
             self.contingency_tables[attrib_index][1])
         return (True, chi_square_test_p_value < self._max_p_value_chi_sq)
+
+    def _calculate_num_valid_nominal_attributes_diff(self):
+        # Assumes the contingency tables are already set.
+        def _get_num_values(values_num_samples):
+            values_seen = set()
+            for value, num_samples in enumerate(values_num_samples):
+                if num_samples > 0:
+                    values_seen.add(value)
+            return len(values_seen)
+
+        diff_num_values_seen = set()
+        for attrib_index, is_valid_nominal_attribute in enumerate(self.valid_nominal_attribute):
+            if is_valid_nominal_attribute:
+                num_values = _get_num_values(self.contingency_tables[attrib_index][1])
+                if num_values not in diff_num_values_seen:
+                    diff_num_values_seen.add(num_values)
+        self.num_valid_nominal_attributes_diff = len(diff_num_values_seen)
 
     def create_subtree(self, criterion):
         """Given the splitting criterion, creates a tree rooted at the current TreeNode.
@@ -909,8 +952,8 @@ class TreeNode(object):
 
         # If a valid attribute has only one value, it should be marked as invalid from this node on.
         num_valid_nominal_attributes = 0
-        for attrib_index in range(len(self.valid_nominal_attribute)):
-            if not self.valid_nominal_attribute[attrib_index]:
+        for attrib_index, is_valid_nominal_attribute in enumerate(self.valid_nominal_attribute):
+            if not is_valid_nominal_attribute:
                 continue
             if not _has_multiple_nominal_values(self.contingency_tables[attrib_index][1]):
                 self.valid_nominal_attribute[attrib_index] = False
@@ -922,7 +965,7 @@ class TreeNode(object):
             return None
 
         if self._use_stop_conditions:
-            num_valid_attributes = 0
+            num_valid_nominal_attributes = 0
             # Attributes which are valid (`True`) in `new_valid_nominal_attribute` and invalid
             # (`False`) in `new_valid_nominal_attribute_incl_chi_sq_test` should not be used to
             # split at this node, but could be used to split in descendant nodes.
@@ -936,38 +979,52 @@ class TreeNode(object):
                          attrib_index,
                          min_allowed_in_two_largest=MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE))
                     if is_valid_chi_sq_and_num_samples:
-                        num_valid_attributes += 1
+                        num_valid_nominal_attributes += 1
                     elif is_valid_num_samples:
                         new_valid_nominal_attribute_incl_chi_sq_test[attrib_index] = False
                     else:
                         new_valid_nominal_attribute[attrib_index] = False
                         new_valid_nominal_attribute_incl_chi_sq_test[attrib_index] = False
             self.valid_nominal_attribute = new_valid_nominal_attribute_incl_chi_sq_test
-            if num_valid_attributes == 0:
+            if num_valid_nominal_attributes == 0:
                 return None
+
+        self._calculate_num_valid_nominal_attributes_diff()
 
         if self.is_monte_carlo_criterion:
             start_time = timeit.default_timer()
-            num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
-            (self.num_tests, self.num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
-                self.upper_p_value_threshold,
-                self.lower_p_value_threshold,
-                self.prob_monte_carlo,
-                num_valid_nominal_attributes)
+            if self.use_one_attrib_per_num_values:
+                (self.num_tests, self.num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
+                    self.upper_p_value_threshold,
+                    self.lower_p_value_threshold,
+                    self.prob_monte_carlo,
+                    self.num_valid_nominal_attributes_diff)
+            else:
+                (self.num_tests, self.num_fails_allowed) = monte_carlo.get_tests_and_fails_allowed(
+                    self.upper_p_value_threshold,
+                    self.lower_p_value_threshold,
+                    self.prob_monte_carlo,
+                    num_valid_nominal_attributes)
             self.time_num_tests_fails = timeit.default_timer() - start_time
 
             if self.calculate_expected_tests:
                 start_time = timeit.default_timer()
-                num_valid_nominal_attributes = sum(self.valid_nominal_attribute)
-                self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
-                    self.num_tests,
-                    self.num_fails_allowed,
-                    num_valid_nominal_attributes)
+                if self.use_one_attrib_per_num_values:
+                    self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
+                        self.num_tests,
+                        self.num_fails_allowed,
+                        self.num_valid_nominal_attributes_diff)
+                else:
+                    self.total_expected_num_tests = monte_carlo.get_expected_total_num_tests(
+                        self.num_tests,
+                        self.num_fails_allowed,
+                        num_valid_nominal_attributes)
                 self.time_expected_tests = timeit.default_timer() - start_time
             else:
                 self.total_expected_num_tests = 0.0
         else:
             self.total_expected_num_tests = 0.0
+
 
         # Get best split. Note that self is the current TreeNode.
         (separation_attrib_index,
@@ -991,7 +1048,7 @@ class TreeNode(object):
                                                              separation_attrib_index,
                                                              values_to_split,
                                                              self.valid_samples_indices,
-                                                             self.dataset.samples)
+                                                             self.curr_dataset.samples)
         # Save this node's split information.
         self.node_split = NodeSplit(separation_attrib_index,
                                     splits_values,
@@ -1008,7 +1065,7 @@ class TreeNode(object):
             # test to child nodes.
             self.valid_nominal_attribute = new_valid_nominal_attribute
         for curr_split_samples_indices in splits_samples_indices:
-            self.nodes.append(TreeNode(self.dataset,
+            self.nodes.append(TreeNode(self.curr_dataset,
                                        curr_split_samples_indices,
                                        self.valid_nominal_attribute[:],
                                        self.max_depth_remaining - 1,
@@ -1019,6 +1076,7 @@ class TreeNode(object):
                                        self.upper_p_value_threshold,
                                        self.lower_p_value_threshold,
                                        self.prob_monte_carlo,
+                                       self.use_one_attrib_per_num_values,
                                        self.calculate_expected_tests))
             self.nodes[-1].create_subtree(criterion)
 
@@ -1105,7 +1163,7 @@ class NodeSplit(object):
             Starts counting at `1`.
     """
     def __init__(self, separation_attrib_index, splits_values, values_to_split, criterion_value,
-                 total_num_tests_needed, accepted_position, mid_point=None):
+                 total_num_tests_needed, accepted_position):
         """Initializes a TreeNode instance with the given arguments.
 
         Args:

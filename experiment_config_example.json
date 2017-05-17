@@ -50,6 +50,7 @@
             "lower p-value threshold": 0.1,
             "prob monte carlo": 0.95,
             "use random order": false,
+            "use one attrib per num values": false
         },
 
         "min num samples allowed": [1],

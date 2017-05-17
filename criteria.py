@@ -7,6 +7,7 @@
 """
 
 import abc
+import collections
 import itertools
 import math
 import random
@@ -21,6 +22,14 @@ ORDER_RANDOMLY = False
 #: works when `ORDER_RANDOMLY` is `True`.
 USE_ONE_ATTRIB_PER_NUM_VALUES = False
 
+#: Contains the information about a given split. When empty, defaults to
+#: `(None, [], float('-inf'))`.
+Split = collections.namedtuple('Split',
+                               ['attrib_index',
+                                'splits_values',
+                                'criterion_value'])
+Split.__new__.__defaults__ = (None, [], float('-inf'))
+
 
 class Criterion(object):
     """Abstract base class for every criterion.
@@ -32,9 +41,8 @@ class Criterion(object):
     @classmethod
     @abc.abstractmethod
     def select_best_attribute_and_split(cls, tree_node, num_tests=0, num_fails_allowed=0):
-        """Returns the best attribute and its best split, according to the criterion, using
-        `num_tests` tests per attribute and accepting if it doesn't fail more than
-        `num_fails_allowed` times.
+        """Returns the best split found, according to the criterion, using `num_tests` tests per
+        attribute and accepting if it doesn't fail more than `num_fails_allowed` times.
         Args:
           tree_node (TreeNode): tree node where we want to find the best attribute/split.
           num_tests (int, optional): number of tests to be executed in each attribute, according to
@@ -42,8 +50,7 @@ class Criterion(object):
           num_fails_allowed (int, optional): maximum number of fails allowed for an attribute to be
             accepted according to our Monte Carlo framework. Defaults to `0`.
         """
-        # returns (separation_attrib_index, splits_values, criterion_value, num_tests_needed,
-        #          position_of_accepted)
+        # returns (best_split, num_tests_needed, position_of_accepted)
         pass
 
 
@@ -79,10 +86,7 @@ class GiniGain(Criterion):
 
         Returns:
             A tuple cointaining, in order:
-                - the index of the accepted attribute;
-                - a list of sets, each containing the values that should go to that split/subtree.
-                -  Split value according to the criterion. If no attribute has a valid split, this
-                value should be `float('-inf')`.
+                - The best split found;
                 - Total number of Monte Carlo tests needed;
                 - Position of the accepted attribute in the attributes' list ordered by the
                 criterion value.
@@ -99,29 +103,27 @@ class GiniGain(Criterion):
                     tree_node.contingency_tables[attrib_index][1],
                     len(tree_node.valid_samples_indices),)
                 curr_total_gini_gain = original_gini - curr_children_gini_index
-                best_splits_per_attrib.append((attrib_index,
-                                               splits_values,
-                                               curr_total_gini_gain))
+                best_splits_per_attrib.append(Split(attrib_index=attrib_index,
+                                                    splits_values=splits_values,
+                                                    criterion_value=curr_total_gini_gain))
         if num_tests == 0: # Just return attribute/split with maximum Gini Gain.
-            best_attribute_and_split = (None, [], float('-inf'))
-            for curr_attrib_split in best_splits_per_attrib:
-                if curr_attrib_split[2] > best_attribute_and_split[2]:
-                    best_attribute_and_split = curr_attrib_split
+            if best_splits_per_attrib:
+                best_split = max(best_splits_per_attrib, key=lambda split: split.criterion_value)
+            else:
+                best_split = Split()
             num_monte_carlo_tests_needed = 0
             position_of_accepted = 1
-            return (*best_attribute_and_split,
-                    num_monte_carlo_tests_needed,
-                    position_of_accepted)
+            return (best_split, num_monte_carlo_tests_needed, position_of_accepted)
         else: # use Monte Carlo approach.
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
-                best_splits_per_attrib.sort(key=lambda x: -x[2])
+                best_splits_per_attrib.sort(key=lambda split: -split.criterion_value)
                 if USE_ONE_ATTRIB_PER_NUM_VALUES:
                     best_splits_per_attrib_clean = []
                     num_values_seen = set()
                     for curr_split in best_splits_per_attrib:
-                        num_values = len(curr_split[1])
+                        num_values = len(curr_split.splits_values)
                         if num_values not in num_values_seen:
                             num_values_seen.add(num_values)
                             best_splits_per_attrib_clean.append(curr_split)
@@ -129,19 +131,18 @@ class GiniGain(Criterion):
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
-                attrib_index, _, criterion_value = best_attrib_split
                 (should_accept,
                  num_tests_needed) = cls._accept_attribute(
-                     criterion_value,
+                     best_attrib_split.criterion_value,
                      num_tests,
                      num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[attrib_index][1])
+                     tree_node.contingency_tables[best_attrib_split.attrib_index][1])
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
-                    return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
-            return (None, [], float('-inf'), total_num_tests_needed, None)
+                    return (best_attrib_split, total_num_tests_needed, curr_position + 1)
+            return (Split(), total_num_tests_needed, None)
 
     @staticmethod
     def _get_values_seen(values_num_samples):
@@ -250,10 +251,7 @@ class Twoing(Criterion):
             accepted according to our Monte Carlo framework. Defaults to `0`.
         Returns:
             A tuple cointaining, in order:
-                - the index of the accepted attribute;
-                - a list of sets, each containing the values that should go to that split/subtree.
-                -  Split value according to the criterion. If no attribute has a valid split, this
-                value should be `float('-inf')`.
+                - The best split found;
                 - Total number of Monte Carlo tests needed;
                 - Position of the accepted attribute in the attributes' list ordered by the
                 criterion value.
@@ -294,29 +292,30 @@ class Twoing(Criterion):
                         best_total_gini_gain = curr_gini_gain
                         best_left_values = left_values
                         best_right_values = right_values
-                best_splits_per_attrib.append((attrib_index,
-                                               [best_left_values, best_right_values],
-                                               best_total_gini_gain))
-        if num_tests == 0: # Just return attribute/split with maximum criterion value.
-            best_attribute_and_split = (None, [], float('-inf'))
-            for curr_attrib_split in best_splits_per_attrib:
-                if curr_attrib_split[2] > best_attribute_and_split[2]:
-                    best_attribute_and_split = curr_attrib_split
+                best_splits_per_attrib.append(Split(attrib_index=attrib_index,
+                                                    splits_values=[best_left_values,
+                                                                   best_right_values],
+                                                    criterion_value=best_total_gini_gain))
+
+
+        if num_tests == 0: # Just return attribute/split with maximum Gini Gain.
+            if best_splits_per_attrib:
+                best_split = max(best_splits_per_attrib, key=lambda split: split.criterion_value)
+            else:
+                best_split = Split()
             num_monte_carlo_tests_needed = 0
             position_of_accepted = 1
-            return (*best_attribute_and_split,
-                    num_monte_carlo_tests_needed,
-                    position_of_accepted)
+            return (best_split, num_monte_carlo_tests_needed, position_of_accepted)
         else: # use Monte Carlo approach.
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
-                best_splits_per_attrib.sort(key=lambda x: -x[2])
+                best_splits_per_attrib.sort(key=lambda split: -split.criterion_value)
                 if USE_ONE_ATTRIB_PER_NUM_VALUES:
                     best_splits_per_attrib_clean = []
                     num_values_seen = set()
                     for curr_split in best_splits_per_attrib:
-                        num_values = len(values_seen_per_attrib[curr_split[0]])
+                        num_values = len(curr_split.splits_values)
                         if num_values not in num_values_seen:
                             num_values_seen.add(num_values)
                             best_splits_per_attrib_clean.append(curr_split)
@@ -324,20 +323,19 @@ class Twoing(Criterion):
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
-                attrib_index, _, criterion_value = best_attrib_split
                 (should_accept,
                  num_tests_needed) = cls._accept_attribute(
-                     criterion_value,
+                     best_attrib_split.criterion_value,
                      num_tests,
                      num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[attrib_index][1],
-                     values_seen_per_attrib[attrib_index])
+                     tree_node.contingency_tables[best_attrib_split.attrib_index][1],
+                     values_seen_per_attrib[best_attrib_split.attrib_index])
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
-                    return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
-            return (None, [], float('-inf'), total_num_tests_needed, None)
+                    return (best_attrib_split, total_num_tests_needed, curr_position + 1)
+            return (Split(), total_num_tests_needed, None)
 
     @staticmethod
     def _get_values_seen(values_num_samples):
@@ -609,10 +607,7 @@ class GainRatio(Criterion):
             accepted according to our Monte Carlo framework. Defaults to `0`.
         Returns:
             A tuple cointaining, in order:
-                - the index of the accepted attribute;
-                - a list of sets, each containing the values that should go to that split/subtree.
-                -  Split value according to the criterion. If no attribute has a valid split, this
-                value should be `float('-inf')`.
+                - The best split found;
                 - Total number of Monte Carlo tests needed;
                 - Position of the accepted attribute in the attributes' list ordered by the
                 criterion value.
@@ -631,30 +626,28 @@ class GainRatio(Criterion):
                     tree_node.contingency_tables[attrib_index][0],
                     tree_node.contingency_tables[attrib_index][1],
                     original_information)
-                best_splits_per_attrib.append((attrib_index,
-                                               splits_values,
-                                               curr_gain_ratio))
+                best_splits_per_attrib.append(Split(attrib_index=attrib_index,
+                                                    splits_values=splits_values,
+                                                    criterion_value=curr_gain_ratio))
 
-        if num_tests == 0: # Just return attribute/split with maximum criterion value.
-            best_attribute_and_split = (None, [], float('-inf'))
-            for curr_attrib_split in best_splits_per_attrib:
-                if curr_attrib_split[2] > best_attribute_and_split[2]:
-                    best_attribute_and_split = curr_attrib_split
+        if num_tests == 0: # Just return attribute/split with maximum Gini Gain.
+            if best_splits_per_attrib:
+                best_split = max(best_splits_per_attrib, key=lambda split: split.criterion_value)
+            else:
+                best_split = Split()
             num_monte_carlo_tests_needed = 0
             position_of_accepted = 1
-            return (*best_attribute_and_split,
-                    num_monte_carlo_tests_needed,
-                    position_of_accepted)
+            return (best_split, num_monte_carlo_tests_needed, position_of_accepted)
         else: # use Monte Carlo approach.
             if ORDER_RANDOMLY:
                 random.shuffle(best_splits_per_attrib)
             else:
-                best_splits_per_attrib.sort(key=lambda x: -x[2])
+                best_splits_per_attrib.sort(key=lambda split: -split.criterion_value)
                 if USE_ONE_ATTRIB_PER_NUM_VALUES:
                     best_splits_per_attrib_clean = []
                     num_values_seen = set()
                     for curr_split in best_splits_per_attrib:
-                        num_values = len(curr_split[1])
+                        num_values = len(curr_split.splits_values)
                         if num_values not in num_values_seen:
                             num_values_seen.add(num_values)
                             best_splits_per_attrib_clean.append(curr_split)
@@ -662,19 +655,18 @@ class GainRatio(Criterion):
 
             total_num_tests_needed = 0
             for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
-                attrib_index, _, criterion_value = best_attrib_split
                 (should_accept,
                  num_tests_needed) = cls._accept_attribute(
-                     criterion_value,
+                     best_attrib_split.criterion_value,
                      num_tests,
                      num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[attrib_index][1])
+                     tree_node.contingency_tables[best_attrib_split.attrib_index][1])
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
-                    return (*best_attrib_split, total_num_tests_needed, curr_position + 1)
-            return (None, [], float('-inf'), total_num_tests_needed, None)
+                    return (best_attrib_split, total_num_tests_needed, curr_position + 1)
+            return (Split(), total_num_tests_needed, None)
 
     @staticmethod
     def _get_values_seen(values_num_samples):

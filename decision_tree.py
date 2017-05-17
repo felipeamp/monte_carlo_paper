@@ -1027,33 +1027,29 @@ class TreeNode(object):
 
 
         # Get best split. Note that self is the current TreeNode.
-        (separation_attrib_index,
-         splits_values,
-         criterion_value,
+        (best_split,
          total_num_tests_needed,
          accepted_position) = criterion.select_best_attribute_and_split(self,
                                                                         self.num_tests,
                                                                         self.num_fails_allowed)
 
-        if math.isinf(criterion_value):
+        if math.isinf(best_split.criterion_value):
             # Stop condition when there is no valid attribute with more than one value (then
-            # criterion_value is default, which is +- inf).
+            # best_split.criterion_value is default, which is +- inf).
             return None
 
-        # Calculate a list containing the inverse information of splits_values: here, given a
-        # value, we want to know to which split it belongs
-        values_to_split = _get_values_to_split(splits_values)
+        # Calculate a list containing the inverse information of best_split.splits_values: here,
+        # given a value, we want to know to which split it belongs
+        values_to_split = _get_values_to_split(best_split.splits_values)
 
-        splits_samples_indices = _get_splits_samples_indices(len(splits_values),
-                                                             separation_attrib_index,
+        splits_samples_indices = _get_splits_samples_indices(len(best_split.splits_values),
+                                                             best_split.attrib_index,
                                                              values_to_split,
                                                              self.valid_samples_indices,
                                                              self.curr_dataset.samples)
         # Save this node's split information.
-        self.node_split = NodeSplit(separation_attrib_index,
-                                    splits_values,
+        self.node_split = NodeSplit(best_split,
                                     values_to_split,
-                                    criterion_value,
                                     total_num_tests_needed,
                                     accepted_position)
 
@@ -1162,27 +1158,22 @@ class NodeSplit(object):
         accepted_position (int): Position of the attribute accepted by the Monte Carlo Framework.
             Starts counting at `1`.
     """
-    def __init__(self, separation_attrib_index, splits_values, values_to_split, criterion_value,
-                 total_num_tests_needed, accepted_position):
+    def __init__(self, split, values_to_split, total_num_tests_needed, accepted_position):
         """Initializes a TreeNode instance with the given arguments.
 
         Args:
-            separation_attrib_index (int): Index of the attribute used for splitting.
-            splits_values (:obj:'list' of 'set' of 'int'): list containing a set of attribute values
-                for each TreeNode child. Binary splits have two sets (left and right split values),
-                multiway splits may have many more.
+            split (Split): Split information (attribute index, split values and criterion value).
             values_to_split (:obj:'dict' of 'int'): reversed index for `splits_values`. Given a
                 value, it returns the index of the split that this value belongs to.
-            criterion_value (float): optimal criterion value obtained for this TreeNode.
             total_num_tests_needed (int): Number of tests needed before the Monte Carlo framework
                 accepted an attribute.
             accepted_position (int): Position of the attribute accepted by the Monte Carlo
                 Framework. Starts counting at `1`.
         """
-        self.separation_attrib_index = separation_attrib_index
-        self.splits_values = splits_values
+        self.separation_attrib_index = split.attrib_index
+        self.splits_values = split.splits_values
         self.values_to_split = values_to_split
-        self.criterion_value = criterion_value
+        self.criterion_value = split.criterion_value
 
         self.total_num_tests_needed = total_num_tests_needed
         self.accepted_position = accepted_position

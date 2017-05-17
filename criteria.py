@@ -96,11 +96,12 @@ class GiniGain(Criterion):
         best_splits_per_attrib = []
         for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
             if is_valid_attrib:
-                values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
+                values_seen = cls._get_values_seen(
+                    tree_node.contingency_tables[attrib_index].values_num_samples)
                 splits_values = [set([value]) for value in values_seen]
                 curr_children_gini_index = cls._calculate_children_gini_index(
-                    tree_node.contingency_tables[attrib_index][0],
-                    tree_node.contingency_tables[attrib_index][1],
+                    tree_node.contingency_tables[attrib_index].contingency_table,
+                    tree_node.contingency_tables[attrib_index].values_num_samples,
                     len(tree_node.valid_samples_indices),)
                 curr_total_gini_gain = original_gini - curr_children_gini_index
                 best_splits_per_attrib.append(Split(attrib_index=attrib_index,
@@ -138,7 +139,8 @@ class GiniGain(Criterion):
                      num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[best_attrib_split.attrib_index][1])
+                     tree_node.contingency_tables[
+                         best_attrib_split.attrib_index].values_num_samples)
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
                     return (best_attrib_split, total_num_tests_needed, curr_position + 1)
@@ -267,14 +269,14 @@ class Twoing(Criterion):
                 best_left_values = set()
                 best_right_values = set()
                 values_seen = cls._get_values_seen(
-                    tree_node.contingency_tables[attrib_index][1])
+                    tree_node.contingency_tables[attrib_index].values_num_samples)
                 values_seen_per_attrib.append(values_seen)
                 for (set_left_classes,
                      set_right_classes) in cls._generate_twoing(tree_node.class_index_num_samples):
                     (twoing_contingency_table,
                      superclass_index_num_samples) = cls._get_twoing_contingency_table(
-                         tree_node.contingency_tables[attrib_index][0],
-                         tree_node.contingency_tables[attrib_index][1],
+                         tree_node.contingency_tables[attrib_index].contingency_table,
+                         tree_node.contingency_tables[attrib_index].values_num_samples,
                          set_left_classes,
                          set_right_classes)
                     original_gini = cls._calculate_gini_index(len(tree_node.valid_samples_indices),
@@ -285,7 +287,7 @@ class Twoing(Criterion):
                          original_gini,
                          superclass_index_num_samples,
                          values_seen,
-                         tree_node.contingency_tables[attrib_index][1],
+                         tree_node.contingency_tables[attrib_index].values_num_samples,
                          twoing_contingency_table,
                          len(tree_node.valid_samples_indices))
                     if curr_gini_gain > best_total_gini_gain:
@@ -330,7 +332,8 @@ class Twoing(Criterion):
                      num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[best_attrib_split.attrib_index][1],
+                     tree_node.contingency_tables[
+                         best_attrib_split.attrib_index].values_num_samples,
                      values_seen_per_attrib[best_attrib_split.attrib_index])
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
@@ -619,12 +622,13 @@ class GainRatio(Criterion):
         best_splits_per_attrib = []
         for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
             if is_valid_attrib:
-                values_seen = cls._get_values_seen(tree_node.contingency_tables[attrib_index][1])
+                values_seen = cls._get_values_seen(
+                    tree_node.contingency_tables[attrib_index].values_num_samples)
                 splits_values = [set([value]) for value in values_seen]
                 curr_gain_ratio = cls._calculate_gain_ratio(
                     len(tree_node.valid_samples_indices),
-                    tree_node.contingency_tables[attrib_index][0],
-                    tree_node.contingency_tables[attrib_index][1],
+                    tree_node.contingency_tables[attrib_index].contingency_table,
+                    tree_node.contingency_tables[attrib_index].values_num_samples,
                     original_information)
                 best_splits_per_attrib.append(Split(attrib_index=attrib_index,
                                                     splits_values=splits_values,
@@ -662,7 +666,8 @@ class GainRatio(Criterion):
                      num_fails_allowed,
                      len(tree_node.valid_samples_indices),
                      tree_node.class_index_num_samples,
-                     tree_node.contingency_tables[best_attrib_split.attrib_index][1])
+                     tree_node.contingency_tables[
+                         best_attrib_split.attrib_index].values_num_samples)
                 total_num_tests_needed += num_tests_needed
                 if should_accept:
                     return (best_attrib_split, total_num_tests_needed, curr_position + 1)

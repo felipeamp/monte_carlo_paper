@@ -4,6 +4,7 @@
 """Module containing the DecisionTree, TreeNode and NodeSplit classes.
 """
 
+import collections
 import math
 import random
 import sys
@@ -27,6 +28,13 @@ USE_MIN_SAMPLES_SECOND_LARGEST_CLASS = True
 #: Minimum number of samples needed in the two most frequent classes such that this node can be
 #: split.
 MIN_SAMPLES_SECOND_LARGEST_CLASS = 40
+
+#: Contains the information about an attribute's contingency table. When empty, defaults to
+#: `(None, None)`.
+ContingencyTable = collections.namedtuple('ContingencyTable',
+                                          ['contingency_table',
+                                           'values_num_samples'])
+ContingencyTable.__new__.__defaults__ = (None, None)
 
 
 class DecisionTree(object):
@@ -430,7 +438,7 @@ class DecisionTree(object):
                         num_values_root_attribute_list.append(sum(
                             num_samples > 0
                             for num_samples in self.get_root_node().contingency_tables[
-                                root_node_split_attrib][1]))
+                                root_node_split_attrib].values_num_samples))
                 except AttributeError:
                     num_trivial_splits += 1
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
@@ -491,7 +499,7 @@ class DecisionTree(object):
                         num_values_root_attribute_list.append(sum(
                             num_samples > 0
                             for num_samples in self.get_root_node().contingency_tables[
-                                root_node_split_attrib][1]))
+                                root_node_split_attrib].values_num_samples))
                 except AttributeError:
                     num_trivial_splits += 1
                 for curr_index, validation_sample_index in enumerate(validation_sample_indices):
@@ -812,12 +820,11 @@ class TreeNode(object):
         self._calculate_contingency_tables()
 
     def _calculate_contingency_tables(self):
-        self.contingency_tables = [] # vector of pairs (attrib_contingency_table,
-                                     #                  attrib_values_num_samples)
+        self.contingency_tables = [] # list of `ContingencyTable`'s
         for (attrib_index,
              is_valid_nominal_attribute) in enumerate(self.valid_nominal_attribute):
             if not is_valid_nominal_attribute:
-                self.contingency_tables.append(([], []))
+                self.contingency_tables.append(ContingencyTable())
                 continue
 
             attrib_num_values = len(self.curr_dataset.attrib_int_to_value[attrib_index])
@@ -831,7 +838,9 @@ class TreeNode(object):
                 curr_contingency_table[curr_sample_value][curr_sample_class] += 1
                 curr_values_num_samples[curr_sample_value] += 1
 
-            self.contingency_tables.append((curr_contingency_table, curr_values_num_samples))
+            self.contingency_tables.append(ContingencyTable(
+                contingency_table=curr_contingency_table,
+                values_num_samples=curr_values_num_samples))
 
     def _is_attribute_valid(self, attrib_index, min_allowed_in_two_largest):
         """Returns a pair of booleans indicating:
@@ -865,10 +874,9 @@ class TreeNode(object):
             return 1. - chi2.cdf(x=curr_chi_square_value, df=((num_classes - 1) * (num_values - 1)))
 
 
-        values_num_samples = self.contingency_tables[attrib_index][1]
         largest = 0
         second_largest = 0
-        for num_samples in values_num_samples:
+        for num_samples in self.contingency_tables[attrib_index].values_num_samples:
             if num_samples > largest:
                 second_largest = largest
                 largest = num_samples
@@ -877,8 +885,8 @@ class TreeNode(object):
         if second_largest < min_allowed_in_two_largest:
             return (False, False)
         chi_square_test_p_value = _get_chi_square_test_p_value(
-            self.contingency_tables[attrib_index][0],
-            self.contingency_tables[attrib_index][1])
+            self.contingency_tables[attrib_index].contingency_table,
+            self.contingency_tables[attrib_index].values_num_samples)
         return (True, chi_square_test_p_value < self._max_p_value_chi_sq)
 
     def _calculate_num_valid_nominal_attributes_diff(self):
@@ -893,7 +901,8 @@ class TreeNode(object):
         diff_num_values_seen = set()
         for attrib_index, is_valid_nominal_attribute in enumerate(self.valid_nominal_attribute):
             if is_valid_nominal_attribute:
-                num_values = _get_num_values(self.contingency_tables[attrib_index][1])
+                num_values = _get_num_values(
+                    self.contingency_tables[attrib_index].values_num_samples)
                 if num_values not in diff_num_values_seen:
                     diff_num_values_seen.add(num_values)
         self.num_valid_nominal_attributes_diff = len(diff_num_values_seen)
@@ -955,7 +964,8 @@ class TreeNode(object):
         for attrib_index, is_valid_nominal_attribute in enumerate(self.valid_nominal_attribute):
             if not is_valid_nominal_attribute:
                 continue
-            if not _has_multiple_nominal_values(self.contingency_tables[attrib_index][1]):
+            if (not _has_multiple_nominal_values(
+                    self.contingency_tables[attrib_index].values_num_samples)):
                 self.valid_nominal_attribute[attrib_index] = False
             else:
                 num_valid_nominal_attributes += 1

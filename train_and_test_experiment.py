@@ -184,7 +184,7 @@ def init_raw_output_csv(raw_output_file_descriptor, output_split_char=','):
                    'U [between 0 and 1]',
                    'L [between 0 and 1]',
                    'prob_monte_carlo [between 0 and 1]',
-                   'Use Only One Attribute per Number of Values?'
+                   'Use Only One Attribute per Number of Values?',
 
                    'Number of Valid Attributes (m)',
                    'Number of Valid Attributes with Different Number of Values (m_diff)',

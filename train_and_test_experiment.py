@@ -71,25 +71,22 @@ def main(experiment_config):
             decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = None
 
         if experiment_config["prunning parameters"]["use monte carlo"]:
-            is_random_ordering = experiment_config["prunning parameters"][
-                "monte carlo parameters"]["upper p-value threshold"]
-            is_random_ordering = experiment_config["prunning parameters"][
-                "monte carlo parameters"]["use random order"]
-            criteria.ORDER_RANDOMLY = is_random_ordering
             upper_p_value_threshold = experiment_config["prunning parameters"][
                 "monte carlo parameters"]["upper p-value threshold"]
             lower_p_value_threshold = experiment_config["prunning parameters"][
                 "monte carlo parameters"]["lower p-value threshold"]
             prob_monte_carlo = experiment_config["prunning parameters"][
                 "monte carlo parameters"]["prob monte carlo"]
+            is_random_ordering = experiment_config["prunning parameters"][
+                "monte carlo parameters"]["use random order"]
+            criteria.ORDER_RANDOMLY = is_random_ordering
             use_one_attrib_per_num_values = experiment_config["prunning parameters"][
                 "monte carlo parameters"]["use one attrib per num values"]
         else:
-            use_monte_carlo = False
-            is_random_ordering = None
             upper_p_value_threshold = None
             lower_p_value_threshold = None
             prob_monte_carlo = None
+            is_random_ordering = None
             use_one_attrib_per_num_values = None
 
         if experiment_config["use all datasets"]:
@@ -120,7 +117,7 @@ def main(experiment_config):
                         starting_seed=starting_seed,
                         use_chi_sq_test=experiment_config["prunning parameters"]["use chi-sq test"],
                         max_p_value_chi_sq=max_p_value_chi_sq,
-                        use_monte_carlo=use_monte_carlo,
+                        use_monte_carlo=experiment_config["prunning parameters"]["use monte carlo"],
                         is_random_ordering=is_random_ordering,
                         upper_p_value_threshold=upper_p_value_threshold,
                         lower_p_value_threshold=lower_p_value_threshold,
@@ -152,7 +149,7 @@ def main(experiment_config):
                         starting_seed=starting_seed,
                         use_chi_sq_test=experiment_config["prunning parameters"]["use chi-sq test"],
                         max_p_value_chi_sq=max_p_value_chi_sq,
-                        use_monte_carlo=use_monte_carlo,
+                        use_monte_carlo=experiment_config["prunning parameters"]["use monte carlo"],
                         is_random_ordering=is_random_ordering,
                         upper_p_value_threshold=upper_p_value_threshold,
                         lower_p_value_threshold=lower_p_value_threshold,

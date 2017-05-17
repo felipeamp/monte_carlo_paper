@@ -9,14 +9,15 @@
         "Gain Ratio"
     ],
 
-    "output folder": "./outputs/single level experiment/monte carlo",
+    "output folder": "./outputs/train_and_test_experiment/with_full_monte_carlo_random/100_samples",
 
-    "num trials": 5,
-    "calculate t-test on accuracy": false,
+    "num trials": 10,
+    "calculate t-test on accuracy": true,
+    "t-test single-sided p-value": 0.05,
 
     "max depth": 1,
     "use cross-validation": false,
-    "num training samples": 10,
+    "num training samples": 100,
 
     "prunning parameters": {
         "use chi-sq test": false,
@@ -26,7 +27,7 @@
             "upper p-value threshold": 0.4,
             "lower p-value threshold": 0.1,
             "prob monte carlo": 0.95,
-            "use random order": false,
+            "use random order": true,
             "use one attrib per num values": false
         },
 

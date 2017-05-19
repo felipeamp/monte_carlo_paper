@@ -20,7 +20,7 @@
     "num folds": 10,
     "is stratified": true,
 
-    "prunning parameters": {
+    "pruning parameters list": [{
         "use chi-sq test": false,
 
         "use monte carlo": true,
@@ -32,8 +32,8 @@
             "use one attrib per num values": false
         },
 
-        "min num samples allowed": [1],
+        "min num samples allowed": 1,
         "use second most freq class min samples": true,
         "second most freq class min samples": 40
-    }
+    }]
 }

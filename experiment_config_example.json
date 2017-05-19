@@ -7,6 +7,7 @@
     //     "cars with aggreg",
     //     "contraceptive",
     //     "contraceptive with aggreg",
+    //     "cover type",
     //     "cover type with aggreg",
     //     "kdd98 multiclass 2",
     //     "kdd98 multiclass 3",
@@ -16,7 +17,9 @@
     //     "nursery",
     //     "nursery with aggreg",
     //     "poker hand",
+    //     "soy",
     //     "splice junction",
+    //     "teaching assistant evaluation",
     //     "titanic survive"
     // ],
     "load one dataset at a time": false,
@@ -39,7 +42,7 @@
     "num folds": 20, // only used when "use cross-validation" is true
     "is stratified": true, // only used when "use cross-validation" is true
 
-    "prunning parameters": {
+    "pruning parameters list": [{
         "use chi-sq test": false, // when false, do not supply "max chi-sq p-value"
         // "max chi-sq p-value": 0.1, // only used if "use chi-sq test" is true.
         // "second most freq value min samples": 40, // only used if "use chi-sq test" is true.
@@ -53,8 +56,8 @@
             "use one attrib per num values": false
         },
 
-        "min num samples allowed": [1],
+        "min num samples allowed": 1,
         "use second most freq class min samples": true, // when false, do not supply "second most freq class min samples"
         "second most freq class min samples": 40, // only used when "use second most freq class min samples" is true
-    },
+    }]
 }

@@ -181,7 +181,7 @@ class DecisionTree(object):
             max_depth (int): maximum tree depth allowed. Zero means the root is a leaf.
             min_samples_per_node (int): if a node has less than this number of training samples, it
                 will necessarily be a leaf.
-            use_stop_conditions (bool, optional): informs wether we should use prunning techniques
+            use_stop_conditions (bool, optional): informs wether we should use pruning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
                 than `MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE` samples in the second most frequent
@@ -199,7 +199,7 @@ class DecisionTree(object):
                 expected number of tests done by our monte carlo framework. Defaults to `False`.
         Returns:
             tuple containing, in order:
-                - time_taken_prunning (float): time spent prunning the trained tree.
+                - time_taken_pruning (float): time spent pruning the trained tree.
                 - nodes_prunned (int): number of nodes prunned.
         """
         self._curr_dataset = curr_dataset
@@ -219,12 +219,12 @@ class DecisionTree(object):
             use_one_attrib_per_num_values=self._use_one_attrib_per_num_values,
             calculate_expected_tests=calculate_expected_tests)
         self._root_node.create_subtree(self._criterion)
-        print('Starting prunning trivial subtrees...')
+        print('Starting pruning trivial subtrees...')
         start_time = timeit.default_timer()
         num_nodes_prunned = self._root_node.prune_trivial_subtrees()
-        time_taken_prunning = timeit.default_timer() - start_time
+        time_taken_pruning = timeit.default_timer() - start_time
         print('Done!')
-        return time_taken_prunning, num_nodes_prunned
+        return time_taken_pruning, num_nodes_prunned
 
     def train_and_test(self, curr_dataset, training_samples_indices, validation_sample_indices,
                        max_depth, min_samples_per_node, use_stop_conditions=False,
@@ -244,7 +244,7 @@ class DecisionTree(object):
             max_depth (int): maximum tree depth allowed. Zero means the root is a leaf.
             min_samples_per_node (int): if a node has less than this number of training samples, it
                 will necessarily be a leaf.
-            use_stop_conditions (bool, optional): informs wether we should use prunning techniques
+            use_stop_conditions (bool, optional): informs wether we should use pruning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
                 than `MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE` samples in the second most frequent
@@ -262,7 +262,7 @@ class DecisionTree(object):
                 expected number of tests done by our monte carlo framework. Defaults to `False`.
 
         Returns:
-            A tuple containing the tree's max depth in the second entry, the time taken prunning
+            A tuple containing the tree's max depth in the second entry, the time taken pruning
             in the third entry and the number of nodes prunned in the fourth entry. In the first
             entry it returns another tuple containing, in order:
                 - a list of predicted class for each validation sample;
@@ -281,7 +281,7 @@ class DecisionTree(object):
                 - list where the i-th entry has the attribute index used for classification of the
                     i-th sample when an unkown value occurred.
         """
-        time_taken_prunning, num_nodes_prunned = self.train(curr_dataset,
+        time_taken_pruning, num_nodes_prunned = self.train(curr_dataset,
                                                             training_samples_indices,
                                                             max_depth,
                                                             min_samples_per_node,
@@ -295,7 +295,7 @@ class DecisionTree(object):
                                        validation_sample_indices,
                                        self._curr_dataset.sample_index_to_key),
                 max_depth,
-                time_taken_prunning,
+                time_taken_pruning,
                 num_nodes_prunned)
 
 
@@ -323,7 +323,7 @@ class DecisionTree(object):
                 samples' splitting in folds. If `None`, a random seed is used. Defaults to `None`.
             print_samples (bool, optional): if `True`, prints the samples indices used at each fold.
                 Used for debugging. Defaults to `False`.
-            use_stop_conditions (bool, optional): informs wether we should use prunning techniques
+            use_stop_conditions (bool, optional): informs wether we should use pruning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
                 than `MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE` samples in the second most frequent
@@ -355,10 +355,10 @@ class DecisionTree(object):
                 - the number of samples classified with unkown values;
                 - list where the i-th entry has the attribute index used for classification of the
                     i-th sample when an unkown value occurred;
-                - list containing the time spent prunning in each fold;
+                - list containing the time spent pruning in each fold;
                 - list containing the number of nodes prunned in each fold;
                 - list containing the maximum tree depth for each fold;
-                - list containing the number of nodes per fold, after prunning;
+                - list containing the number of nodes per fold, after pruning;
                 - list containing the number of valid attributes in root node in each fold;
                 - Accuracy percentage obtained by classifying, in each fold, the test samples in the
                 most common class among training samples;
@@ -379,7 +379,7 @@ class DecisionTree(object):
         num_valid_nominal_attributes_in_root_per_fold = []
         num_values_root_attribute_list = []
         num_trivial_splits = 0
-        time_taken_prunning_per_fold = []
+        time_taken_pruning_per_fold = []
         num_nodes_prunned_per_fold = []
         num_correct_trivial_classifications = 0
         num_valid_nominal_attributes_diff_in_root_per_fold = []
@@ -418,7 +418,7 @@ class DecisionTree(object):
                   curr_num_unkown,
                   curr_unkown_value_attrib_index_array),
                  curr_max_depth,
-                 curr_time_taken_prunning,
+                 curr_time_taken_pruning,
                  curr_num_nodes_prunned) = self.train_and_test(curr_dataset,
                                                                training_samples_indices,
                                                                validation_sample_indices,
@@ -457,7 +457,7 @@ class DecisionTree(object):
                     (self.get_trivial_accuracy(validation_sample_indices) / 100.0))
 
                 fold_count += 1
-                time_taken_prunning_per_fold.append(curr_time_taken_prunning)
+                time_taken_pruning_per_fold.append(curr_time_taken_pruning)
                 num_nodes_prunned_per_fold.append(curr_num_nodes_prunned)
 
                 if print_tree:
@@ -479,7 +479,7 @@ class DecisionTree(object):
                   curr_num_unkown,
                   curr_unkown_value_attrib_index_array),
                  curr_max_depth,
-                 curr_time_taken_prunning,
+                 curr_time_taken_pruning,
                  curr_num_nodes_prunned) = self.train_and_test(curr_dataset,
                                                                training_samples_indices,
                                                                validation_sample_indices,
@@ -518,7 +518,7 @@ class DecisionTree(object):
                     (self.get_trivial_accuracy(validation_sample_indices) / 100.0))
 
                 fold_count += 1
-                time_taken_prunning_per_fold.append(curr_time_taken_prunning)
+                time_taken_pruning_per_fold.append(curr_time_taken_pruning)
                 num_nodes_prunned_per_fold.append(curr_num_nodes_prunned)
 
                 if print_tree:
@@ -535,7 +535,7 @@ class DecisionTree(object):
                  classified_with_unkown_value_array,
                  num_unkown,
                  unkown_value_attrib_index_array,
-                 time_taken_prunning_per_fold,
+                 time_taken_pruning_per_fold,
                  num_nodes_prunned_per_fold,
                  max_depth_per_fold,
                  num_nodes_per_fold,
@@ -742,7 +742,7 @@ class TreeNode(object):
             min_samples_per_node (int): minimum number of samples that must be present in order to
                 try to create a subtree rooted at this node. If less than this, this node will be a
                 leaf.
-            use_stop_conditions (bool, optional): informs wether we should use prunning techniques
+            use_stop_conditions (bool, optional): informs wether we should use pruning techniques
                 to avoid using attributes with small number of samples (and, thus, avoiding
                 statistical anomalies). An attribute will be considered invalid if it contains less
                 than `MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE` samples in the second most frequent
@@ -1108,7 +1108,7 @@ class TreeNode(object):
         return sum(subtree.get_subtree_time_expected_tests() for subtree in self.nodes)
 
     def prune_trivial_subtrees(self):
-        """Applies prunning to an already trained tree. Returns the number of prunned nodes.
+        """Applies pruning to an already trained tree. Returns the number of prunned nodes.
 
         If a TreeNode is trivial, that is, every leaf in its subtree has the same
         `most_common_int_class`, then the current TreeNode becomes a leaf with this class, deleting

@@ -37,6 +37,7 @@ RANDOM_SEEDS = [65537, 986112772, 580170418, 897083807, 1286664107, 899169460, 1
                 760815609, 504204359, 1424661575, 1228406087, 1971630940, 1758874112, 1403628276,
                 643422904, 1196432617]
 
+
 def main(experiment_config):
     """Sets the configurations according to `experiment_config` and runs them.
     """
@@ -50,41 +51,6 @@ def main(experiment_config):
         else:
             starting_seed = experiment_config["starting seed index"]
 
-        if experiment_config["prunning parameters"]["use chi-sq test"]:
-            max_p_value_chi_sq = experiment_config["prunning parameters"]["max chi-sq p-value"]
-            decision_tree.MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE = experiment_config[
-                "prunning parameters"]["second most freq value min samples"]
-        else:
-            max_p_value_chi_sq = None
-            decision_tree.MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE = None
-
-        decision_tree.USE_MIN_SAMPLES_SECOND_LARGEST_CLASS = experiment_config[
-            "prunning parameters"]["use second most freq class min samples"]
-        if decision_tree.USE_MIN_SAMPLES_SECOND_LARGEST_CLASS:
-            decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = experiment_config[
-                "prunning parameters"]["second most freq class min samples"]
-        else:
-            decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = None
-
-        if experiment_config["prunning parameters"]["use monte carlo"]:
-            upper_p_value_threshold = experiment_config["prunning parameters"][
-                "monte carlo parameters"]["upper p-value threshold"]
-            lower_p_value_threshold = experiment_config["prunning parameters"][
-                "monte carlo parameters"]["lower p-value threshold"]
-            prob_monte_carlo = experiment_config["prunning parameters"][
-                "monte carlo parameters"]["prob monte carlo"]
-            is_random_ordering = experiment_config["prunning parameters"][
-                "monte carlo parameters"]["use random order"]
-            criteria.ORDER_RANDOMLY = is_random_ordering
-            use_one_attrib_per_num_values = experiment_config["prunning parameters"][
-                "monte carlo parameters"]["use one attrib per num values"]
-        else:
-            upper_p_value_threshold = None
-            lower_p_value_threshold = None
-            prob_monte_carlo = None
-            is_random_ordering = None
-            use_one_attrib_per_num_values = None
-
         if experiment_config["use all datasets"]:
             datasets_configs = dataset.load_all_configs(experiment_config["datasets basepath"])
             datasets_configs.sort(key=lambda config: config["dataset name"])
@@ -95,14 +61,51 @@ def main(experiment_config):
                                 for folderpath in datasets_folders]
         if experiment_config["load one dataset at a time"]:
             for (dataset_config,
-                 min_num_samples_allowed) in itertools.product(
+                 pruning_parameters) in itertools.product(
                      datasets_configs,
-                     experiment_config["prunning parameters"]["min num samples allowed"]):
+                     experiment_config["pruning parameters list"]):
+
                 curr_dataset = dataset.Dataset(dataset_config["filepath"],
                                                dataset_config["key attrib index"],
                                                dataset_config["class attrib index"],
                                                dataset_config["split char"],
                                                dataset_config["missing value string"])
+
+                if pruning_parameters["use chi-sq test"]:
+                    max_p_value_chi_sq = pruning_parameters["max chi-sq p-value"]
+                    decision_tree.MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE = pruning_parameters[
+                        "second most freq value min samples"]
+                else:
+                    max_p_value_chi_sq = None
+                    decision_tree.MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE = None
+
+                decision_tree.USE_MIN_SAMPLES_SECOND_LARGEST_CLASS = pruning_parameters[
+                    "use second most freq class min samples"]
+                if decision_tree.USE_MIN_SAMPLES_SECOND_LARGEST_CLASS:
+                    decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = pruning_parameters[
+                        "second most freq class min samples"]
+                else:
+                    decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = None
+
+                if pruning_parameters["use monte carlo"]:
+                    upper_p_value_threshold = pruning_parameters["monte carlo parameters"][
+                        "upper p-value threshold"]
+                    lower_p_value_threshold = pruning_parameters["monte carlo parameters"][
+                        "lower p-value threshold"]
+                    prob_monte_carlo = pruning_parameters["monte carlo parameters"][
+                        "prob monte carlo"]
+                    is_random_ordering = pruning_parameters["monte carlo parameters"][
+                        "use random order"]
+                    criteria.ORDER_RANDOMLY = is_random_ordering
+                    use_one_attrib_per_num_values = pruning_parameters["monte carlo parameters"][
+                        "use one attrib per num values"]
+                else:
+                    upper_p_value_threshold = None
+                    lower_p_value_threshold = None
+                    prob_monte_carlo = None
+                    is_random_ordering = None
+                    use_one_attrib_per_num_values = None
+
                 for criterion in criteria_list:
                     print('-'*100)
                     print(criterion.name)
@@ -110,15 +113,15 @@ def main(experiment_config):
                     run(dataset_config["dataset name"],
                         curr_dataset,
                         criterion,
-                        min_num_samples_allowed=min_num_samples_allowed,
+                        min_num_samples_allowed=pruning_parameters["min num samples allowed"],
                         max_depth=experiment_config["max depth"],
                         num_trials=experiment_config["num trials"],
                         starting_seed=starting_seed,
                         num_folds=experiment_config["num folds"],
                         is_stratified=experiment_config["is stratified"],
-                        use_chi_sq_test=experiment_config["prunning parameters"]["use chi-sq test"],
+                        use_chi_sq_test=pruning_parameters["use chi-sq test"],
                         max_p_value_chi_sq=max_p_value_chi_sq,
-                        use_monte_carlo=experiment_config["prunning parameters"]["use monte carlo"],
+                        use_monte_carlo=pruning_parameters["use monte carlo"],
                         is_random_ordering=is_random_ordering,
                         upper_p_value_threshold=upper_p_value_threshold,
                         lower_p_value_threshold=lower_p_value_threshold,
@@ -129,9 +132,45 @@ def main(experiment_config):
         else:
             datasets = dataset.load_all_datasets(datasets_configs)
             for ((dataset_name, curr_dataset),
-                 min_num_samples_allowed) in itertools.product(
+                 pruning_parameters) in itertools.product(
                      datasets,
-                     experiment_config["prunning parameters"]["min num samples allowed"]):
+                     experiment_config["pruning parameters list"]):
+
+                if pruning_parameters["use chi-sq test"]:
+                    max_p_value_chi_sq = pruning_parameters["max chi-sq p-value"]
+                    decision_tree.MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE = pruning_parameters[
+                        "second most freq value min samples"]
+                else:
+                    max_p_value_chi_sq = None
+                    decision_tree.MIN_SAMPLES_IN_SECOND_MOST_FREQUENT_VALUE = None
+
+                decision_tree.USE_MIN_SAMPLES_SECOND_LARGEST_CLASS = pruning_parameters[
+                    "use second most freq class min samples"]
+                if decision_tree.USE_MIN_SAMPLES_SECOND_LARGEST_CLASS:
+                    decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = pruning_parameters[
+                        "second most freq class min samples"]
+                else:
+                    decision_tree.MIN_SAMPLES_SECOND_LARGEST_CLASS = None
+
+                if pruning_parameters["use monte carlo"]:
+                    upper_p_value_threshold = pruning_parameters["monte carlo parameters"][
+                        "upper p-value threshold"]
+                    lower_p_value_threshold = pruning_parameters["monte carlo parameters"][
+                        "lower p-value threshold"]
+                    prob_monte_carlo = pruning_parameters["monte carlo parameters"][
+                        "prob monte carlo"]
+                    is_random_ordering = pruning_parameters["monte carlo parameters"][
+                        "use random order"]
+                    criteria.ORDER_RANDOMLY = is_random_ordering
+                    use_one_attrib_per_num_values = pruning_parameters["monte carlo parameters"][
+                        "use one attrib per num values"]
+                else:
+                    upper_p_value_threshold = None
+                    lower_p_value_threshold = None
+                    prob_monte_carlo = None
+                    is_random_ordering = None
+                    use_one_attrib_per_num_values = None
+
                 for criterion in criteria_list:
                     print('-'*100)
                     print(criterion.name)
@@ -139,15 +178,15 @@ def main(experiment_config):
                     run(dataset_name,
                         curr_dataset,
                         criterion,
-                        min_num_samples_allowed=min_num_samples_allowed,
+                        min_num_samples_allowed=pruning_parameters["min num samples allowed"],
                         max_depth=experiment_config["max depth"],
                         num_trials=experiment_config["num trials"],
                         starting_seed=starting_seed,
                         num_folds=experiment_config["num folds"],
                         is_stratified=experiment_config["is stratified"],
-                        use_chi_sq_test=experiment_config["prunning parameters"]["use chi-sq test"],
+                        use_chi_sq_test=pruning_parameters["use chi-sq test"],
                         max_p_value_chi_sq=max_p_value_chi_sq,
-                        use_monte_carlo=experiment_config["prunning parameters"]["use monte carlo"],
+                        use_monte_carlo=pruning_parameters["use monte carlo"],
                         is_random_ordering=is_random_ordering,
                         upper_p_value_threshold=upper_p_value_threshold,
                         lower_p_value_threshold=lower_p_value_threshold,
@@ -203,13 +242,13 @@ def init_raw_output_csv(raw_output_file_descriptor, output_split_char=','):
 
                    'Number of Trivial Splits [between 0 and number of folds]',
 
-                   'Average Number of Nodes (after prunning)',
-                   'Maximum Number of Nodes (after prunning)',
-                   'Minimum Number of Nodes (after prunning)',
+                   'Average Number of Nodes (after pruning)',
+                   'Maximum Number of Nodes (after pruning)',
+                   'Minimum Number of Nodes (after pruning)',
 
-                   'Average Tree Depth (after prunning)',
-                   'Maximum Tree Depth (after prunning)',
-                   'Minimum Tree Depth (after prunning)',
+                   'Average Tree Depth (after pruning)',
+                   'Maximum Tree Depth (after pruning)',
+                   'Minimum Tree Depth (after pruning)',
 
                    'Average Number of Nodes Pruned']
     print(output_split_char.join(fields_list), file=raw_output_file_descriptor)

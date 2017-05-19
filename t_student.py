@@ -51,9 +51,9 @@ CROSS_VALIDATION_COLUMN_INDICES = ColumnIndices(dataset_col=1,
                                                 use_random_order=15,
                                                 use_one_attrib_per_num_values=19,
                                                 trial_number_col=3,
-                                                accuracy_w_missing_col=22,
-                                                accuracy_wo_missing_col=23,
-                                                num_nodes_col=30)
+                                                accuracy_w_missing_col=24,
+                                                accuracy_wo_missing_col=25,
+                                                num_nodes_col=32)
 
 #: Contain the column indices for a train-and-test experiment. Starts at zero.
 TRAIN_AND_TEST_COLUMN_INDICES = ColumnIndices(dataset_col=1,
@@ -71,9 +71,9 @@ TRAIN_AND_TEST_COLUMN_INDICES = ColumnIndices(dataset_col=1,
                                               use_random_order=15,
                                               use_one_attrib_per_num_values=19,
                                               trial_number_col=5,
-                                              accuracy_w_missing_col=33,
-                                              accuracy_wo_missing_col=34,
-                                              num_nodes_col=37)
+                                              accuracy_w_missing_col=35,
+                                              accuracy_wo_missing_col=36,
+                                              num_nodes_col=39)
 
 
 PruningParameters = collections.namedtuple('PruningParameters',
@@ -305,7 +305,7 @@ def _save_aggreg_stats(output_path, single_sided_p_value_threshold):
                              prunning_parameters_2)] = [0, 0, 0, 0, 0, 0]
 
             try:
-                p_value_w_missing = float(line_list[5])
+                p_value_w_missing = float(line_list[28])
                 if p_value_w_missing <= single_sided_p_value_threshold:
                     aggreg_data[(dataset_name,
                                  criterion_name,
@@ -324,7 +324,7 @@ def _save_aggreg_stats(output_path, single_sided_p_value_threshold):
                 pass
 
             try:
-                p_value_wo_missing = float(line_list[8])
+                p_value_wo_missing = float(line_list[31])
                 if p_value_wo_missing is not None:
                     if p_value_wo_missing <= single_sided_p_value_threshold:
                         aggreg_data[(dataset_name,
@@ -344,7 +344,7 @@ def _save_aggreg_stats(output_path, single_sided_p_value_threshold):
                 pass
 
             try:
-                p_value_num_nodes = float(line_list[11])
+                p_value_num_nodes = float(line_list[34])
                 if p_value_num_nodes is not None:
                     if p_value_num_nodes <= single_sided_p_value_threshold:
                         aggreg_data[(dataset_name,

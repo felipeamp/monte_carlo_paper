@@ -18,6 +18,18 @@ from scipy.stats import t as student_t
 ColumnIndices = collections.namedtuple('ColumnIndices',
                                        ['dataset_col',
                                         'criterion_col',
+                                        'use_chi_sq',
+                                        'max_chi_sq_p_value',
+                                        'min_num_values_second_most_freq_value',
+                                        'num_min_samples_allowed',
+                                        'use_second_largest_class_min_samples',
+                                        'min_samples_in_second_largest_class',
+                                        'use_monte_carlo',
+                                        'upper_p_value_threshold',
+                                        'lower_p_value_threshold',
+                                        'prob_monte_carlo',
+                                        'use_random_order',
+                                        'use_one_attrib_per_num_values',
                                         'trial_number_col',
                                         'accuracy_w_missing_col',
                                         'accuracy_wo_missing_col',
@@ -26,6 +38,18 @@ ColumnIndices = collections.namedtuple('ColumnIndices',
 #: Contain the column indices for a cross-validation experiment. Starts at zero.
 CROSS_VALIDATION_COLUMN_INDICES = ColumnIndices(dataset_col=1,
                                                 criterion_col=4,
+                                                use_chi_sq=11,
+                                                max_chi_sq_p_value=12,
+                                                min_num_values_second_most_freq_value=13,
+                                                num_min_samples_allowed=8,
+                                                use_second_largest_class_min_samples=9,
+                                                min_samples_in_second_largest_class=10,
+                                                use_monte_carlo=14,
+                                                upper_p_value_threshold=16,
+                                                lower_p_value_threshold=17,
+                                                prob_monte_carlo=18,
+                                                use_random_order=15,
+                                                use_one_attrib_per_num_values=19,
                                                 trial_number_col=3,
                                                 accuracy_w_missing_col=22,
                                                 accuracy_wo_missing_col=23,
@@ -34,11 +58,37 @@ CROSS_VALIDATION_COLUMN_INDICES = ColumnIndices(dataset_col=1,
 #: Contain the column indices for a train-and-test experiment. Starts at zero.
 TRAIN_AND_TEST_COLUMN_INDICES = ColumnIndices(dataset_col=1,
                                               criterion_col=6,
+                                              use_chi_sq=11,
+                                              max_chi_sq_p_value=12,
+                                              min_num_values_second_most_freq_value=13,
+                                              num_min_samples_allowed=8,
+                                              use_second_largest_class_min_samples=9,
+                                              min_samples_in_second_largest_class=10,
+                                              use_monte_carlo=14,
+                                              upper_p_value_threshold=16,
+                                              lower_p_value_threshold=17,
+                                              prob_monte_carlo=18,
+                                              use_random_order=15,
+                                              use_one_attrib_per_num_values=19,
                                               trial_number_col=5,
                                               accuracy_w_missing_col=33,
                                               accuracy_wo_missing_col=34,
                                               num_nodes_col=37)
 
+
+PrunningParameters = collections.namedtuple('PrunningParameters',
+                                            ['use_chi_sq',
+                                             'max_chi_sq_p_value',
+                                             'min_num_values_second_most_freq_value',
+                                             'num_min_samples_allowed',
+                                             'use_second_largest_class_min_samples',
+                                             'min_samples_in_second_largest_class',
+                                             'use_monte_carlo',
+                                             'upper_p_value_threshold',
+                                             'lower_p_value_threshold',
+                                             'prob_monte_carlo',
+                                             'use_random_order',
+                                             'use_one_attrib_per_num_values'])
 
 def main(output_path):
     '''Calculates the t-student statistics of experiments contained in this folder.
@@ -108,8 +158,34 @@ def _save_raw_stats(raw_data, output_path):
     raw_stats_output_file = os.path.join(output_path, 'raw_t_student_stats.csv')
     with open(raw_stats_output_file, 'w') as fout:
         header = ['Dataset',
-                  'Attribute',
-                  'Criterion Difference Name',
+                  'Criterion Name',
+
+                  'use_chi_sq (1)',
+                  'max_chi_sq_p_value (1)',
+                  'min_num_values_second_most_freq_value (1)',
+                  'num_min_samples_allowed (1)',
+                  'use_second_largest_class_min_samples (1)',
+                  'min_samples_in_second_largest_class (1)',
+                  'use_monte_carlo (1)',
+                  'upper_p_value_threshold (1)',
+                  'lower_p_value_threshold (1)',
+                  'prob_monte_carlo (1)',
+                  'use_random_order (1)',
+                  'use_one_attrib_per_num_values (1)',
+
+                  'use_chi_sq (2)',
+                  'max_chi_sq_p_value (2)',
+                  'min_num_values_second_most_freq_value (2)',
+                  'num_min_samples_allowed (2)',
+                  'use_second_largest_class_min_samples (2)',
+                  'min_samples_in_second_largest_class (2)',
+                  'use_monte_carlo (2)',
+                  'upper_p_value_threshold (2)',
+                  'lower_p_value_threshold (2)',
+                  'prob_monte_carlo (2)',
+                  'use_random_order (2)',
+                  'use_one_attrib_per_num_values (2)',
+
                   'Paired t-statistics on Accuracy with Missing Values',
                   'Degrees of Freedom of Accuracy with Missing Values',
                   'P-value t-statistics on Accuracy with Missing Values',
@@ -122,49 +198,53 @@ def _save_raw_stats(raw_data, output_path):
         print(','.join(header), file=fout)
 
         for dataset_name in raw_data:
-            for (criterion_name_1,
-                 criterion_name_2) in itertools.combinations(raw_data[dataset_name], 2):
+            for criterion_name in raw_data[dataset_name]:
+                for (prunning_parameters_1,
+                     prunning_parameters_2) in itertools.combinations(
+                         raw_data[dataset_name][criterion_name], 2):
 
-                criterion_diff_name = ' - '.join((criterion_name_1, criterion_name_2))
-                accuracy_w_missing_diff = []
-                accuracy_wo_missing_diff = []
-                num_nodes_diff = []
+                    accuracy_w_missing_diff = []
+                    accuracy_wo_missing_diff = []
+                    num_nodes_diff = []
 
-                trial_number_intersection = (
-                    set(raw_data[dataset_name][criterion_name_1].keys())
-                    & set(raw_data[dataset_name][criterion_name_2].keys()))
-                for trial_number in trial_number_intersection:
-                    criterion_1_data = raw_data[dataset_name][criterion_name_1][trial_number]
-                    criterion_2_data = raw_data[dataset_name][criterion_name_2][trial_number]
+                    trial_number_intersection = (
+                        set(raw_data[dataset_name][criterion_name][prunning_parameters_1].keys())
+                        & set(raw_data[dataset_name][criterion_name][prunning_parameters_2].keys()))
+                    for trial_number in trial_number_intersection:
+                        prunning_parameters_1_data = raw_data[dataset_name][criterion_name][
+                            prunning_parameters_1][trial_number]
+                        prunning_parameters_2_data = raw_data[dataset_name][criterion_name][
+                            prunning_parameters_2][trial_number]
 
-                    accuracy_w_missing_diff.append(
-                        criterion_1_data[0] - criterion_2_data[0])
-                    if (criterion_1_data[1] is not None
-                            and criterion_2_data[1] is not None):
-                        accuracy_wo_missing_diff.append(
-                            criterion_1_data[1] - criterion_2_data[1])
-                    num_nodes_diff.append(
-                        criterion_1_data[2] - criterion_2_data[2])
+                        accuracy_w_missing_diff.append(
+                            prunning_parameters_1_data[0] - prunning_parameters_2_data[0])
+                        if (prunning_parameters_1_data[1] is not None
+                                and prunning_parameters_2_data[1] is not None):
+                            accuracy_wo_missing_diff.append(
+                                prunning_parameters_1_data[1] - prunning_parameters_2_data[1])
+                        num_nodes_diff.append(
+                            prunning_parameters_1_data[2] - prunning_parameters_2_data[2])
 
-                (t_statistic_w_missing,
-                 p_value_w_missing) = _calculate_t_statistic(accuracy_w_missing_diff)
-                (t_statistic_wo_missing,
-                 p_value_wo_missing) = _calculate_t_statistic(accuracy_wo_missing_diff)
-                (t_statistic_num_nodes,
-                 p_value_num_nodes) = _calculate_t_statistic(num_nodes_diff)
-                print(','.join([dataset_name,
-                                str(None),
-                                criterion_diff_name,
-                                str(t_statistic_w_missing),
-                                str(len(accuracy_w_missing_diff) - 1),
-                                str(p_value_w_missing),
-                                str(t_statistic_wo_missing),
-                                str(len(accuracy_wo_missing_diff) - 1),
-                                str(p_value_wo_missing),
-                                str(t_statistic_num_nodes),
-                                str(len(num_nodes_diff) - 1),
-                                str(p_value_num_nodes)]),
-                      file=fout)
+                    (t_statistic_w_missing,
+                     p_value_w_missing) = _calculate_t_statistic(accuracy_w_missing_diff)
+                    (t_statistic_wo_missing,
+                     p_value_wo_missing) = _calculate_t_statistic(accuracy_wo_missing_diff)
+                    (t_statistic_num_nodes,
+                     p_value_num_nodes) = _calculate_t_statistic(num_nodes_diff)
+                    print(','.join([dataset_name,
+                                    criterion_name,
+                                    *list(map(prunning_parameters_1, str)),
+                                    *list(map(prunning_parameters_2, str)),
+                                    str(t_statistic_w_missing),
+                                    str(len(accuracy_w_missing_diff) - 1),
+                                    str(p_value_w_missing),
+                                    str(t_statistic_wo_missing),
+                                    str(len(accuracy_wo_missing_diff) - 1),
+                                    str(p_value_wo_missing),
+                                    str(t_statistic_num_nodes),
+                                    str(len(num_nodes_diff) - 1),
+                                    str(p_value_num_nodes)]),
+                          file=fout)
 
 
 def _calculate_t_statistic(samples_list):
@@ -188,9 +268,11 @@ def _calculate_t_statistic(samples_list):
 
 
 def _save_aggreg_stats(output_path, single_sided_p_value_threshold):
-    # aggreg_data[(dataset, attribute, criterion)] = [num_times_stat_better_w_missing,
-    #                                                 num_times_stat_better_wo_missing,
-    #                                                 num_times_stat_larger_num_nodes]
+    # aggreg_data[(dataset,
+    #              criterion_name,
+    #              prunning_parameters)] = [num_times_stat_better_w_missing,
+    #                                       num_times_stat_better_wo_missing,
+    #                                       num_times_stat_larger_num_nodes]
     aggreg_data = {}
     raw_stats_output_file = os.path.join(output_path, 'raw_t_student_stats.csv')
     has_read_header = False
@@ -202,23 +284,36 @@ def _save_aggreg_stats(output_path, single_sided_p_value_threshold):
             line_list = line.split(',')
 
             dataset_name = line_list[0]
-            attribute = line_list[1]
-            criterion_diff_name = line_list[2]
-            criterion_name_1, criterion_name_2 = criterion_diff_name.split(' - ')
+            criterion_name = line_list[1]
 
-            if (dataset_name, attribute, criterion_name_1) not in aggreg_data:
-                aggreg_data[(dataset_name, attribute, criterion_name_1)] = [0, 0, 0, 0, 0, 0]
-            if (dataset_name, attribute, criterion_name_2) not in aggreg_data:
-                aggreg_data[(dataset_name, attribute, criterion_name_2)] = [0, 0, 0, 0, 0, 0]
+            prunning_parameters_1 = line_list[2:14]
+            prunning_parameters_2 = line_list[14:26]
+
+            if (dataset_name, criterion_name, prunning_parameters_1) not in aggreg_data:
+                aggreg_data[(dataset_name,
+                             criterion_name,
+                             prunning_parameters_1)] = [0, 0, 0, 0, 0, 0]
+            if (dataset_name, criterion_name, prunning_parameters_2) not in aggreg_data:
+                aggreg_data[(dataset_name,
+                             criterion_name,
+                             prunning_parameters_2)] = [0, 0, 0, 0, 0, 0]
 
             try:
                 p_value_w_missing = float(line_list[5])
                 if p_value_w_missing <= single_sided_p_value_threshold:
-                    aggreg_data[(dataset_name, attribute, criterion_name_1)][0] += 1
-                    aggreg_data[(dataset_name, attribute, criterion_name_2)][3] += 1
+                    aggreg_data[(dataset_name,
+                                 criterion_name,
+                                 prunning_parameters_1)][0] += 1
+                    aggreg_data[(dataset_name,
+                                 criterion_name,
+                                 prunning_parameters_2)][3] += 1
                 elif p_value_w_missing >= 1. - single_sided_p_value_threshold:
-                    aggreg_data[(dataset_name, attribute, criterion_name_1)][3] += 1
-                    aggreg_data[(dataset_name, attribute, criterion_name_2)][0] += 1
+                    aggreg_data[(dataset_name,
+                                 criterion_name,
+                                 prunning_parameters_1)][3] += 1
+                    aggreg_data[(dataset_name,
+                                 criterion_name,
+                                 prunning_parameters_2)][0] += 1
             except ValueError:
                 pass
 
@@ -226,11 +321,19 @@ def _save_aggreg_stats(output_path, single_sided_p_value_threshold):
                 p_value_wo_missing = float(line_list[8])
                 if p_value_wo_missing is not None:
                     if p_value_wo_missing <= single_sided_p_value_threshold:
-                        aggreg_data[(dataset_name, attribute, criterion_name_1)][1] += 1
-                        aggreg_data[(dataset_name, attribute, criterion_name_2)][4] += 1
+                        aggreg_data[(dataset_name,
+                                     criterion_name,
+                                     prunning_parameters_1)][1] += 1
+                        aggreg_data[(dataset_name,
+                                     criterion_name,
+                                     prunning_parameters_2)][4] += 1
                     elif p_value_wo_missing >= 1. - single_sided_p_value_threshold:
-                        aggreg_data[(dataset_name, attribute, criterion_name_1)][4] += 1
-                        aggreg_data[(dataset_name, attribute, criterion_name_2)][1] += 1
+                        aggreg_data[(dataset_name,
+                                     criterion_name,
+                                     prunning_parameters_1)][4] += 1
+                        aggreg_data[(dataset_name,
+                                     criterion_name,
+                                     prunning_parameters_2)][1] += 1
             except ValueError:
                 pass
 
@@ -238,19 +341,40 @@ def _save_aggreg_stats(output_path, single_sided_p_value_threshold):
                 p_value_num_nodes = float(line_list[11])
                 if p_value_num_nodes is not None:
                     if p_value_num_nodes <= single_sided_p_value_threshold:
-                        aggreg_data[(dataset_name, attribute, criterion_name_1)][2] += 1
-                        aggreg_data[(dataset_name, attribute, criterion_name_2)][5] += 1
+                        aggreg_data[(dataset_name,
+                                     criterion_name,
+                                     prunning_parameters_1)][2] += 1
+                        aggreg_data[(dataset_name,
+                                     criterion_name,
+                                     prunning_parameters_2)][5] += 1
                     elif p_value_num_nodes >= 1. - single_sided_p_value_threshold:
-                        aggreg_data[(dataset_name, attribute, criterion_name_1)][5] += 1
-                        aggreg_data[(dataset_name, attribute, criterion_name_2)][2] += 1
+                        aggreg_data[(dataset_name,
+                                     criterion_name,
+                                     prunning_parameters_1)][5] += 1
+                        aggreg_data[(dataset_name,
+                                     criterion_name,
+                                     prunning_parameters_2)][2] += 1
             except ValueError:
                 pass
 
     aggreg_stats_output_file = os.path.join(output_path, 'aggreg_t_student_stats.csv')
     with open(aggreg_stats_output_file, 'w') as fout:
         header = ['Dataset',
-                  'Attribute',
-                  'Criterion',
+                  'Criterion Name',
+
+                  'use_chi_sq',
+                  'max_chi_sq_p_value',
+                  'min_num_values_second_most_freq_value',
+                  'num_min_samples_allowed',
+                  'use_second_largest_class_min_samples',
+                  'min_samples_in_second_largest_class',
+                  'use_monte_carlo',
+                  'upper_p_value_threshold',
+                  'lower_p_value_threshold',
+                  'prob_monte_carlo',
+                  'use_random_order',
+                  'use_one_attrib_per_num_values',
+
                   'Number of times is statistically better with missing values',
                   'Number of times is statistically better without missing values',
                   'Number of times has statistically larger number of nodes',
@@ -260,7 +384,7 @@ def _save_aggreg_stats(output_path, single_sided_p_value_threshold):
         print(','.join(header), file=fout)
         for keys in sorted(aggreg_data):
             values = map(str, aggreg_data[keys])
-            print(','.join([*keys, *values]), file=fout)
+            print(','.join([keys[0], keys[1], *keys[2], *values]), file=fout)
 
 
 if __name__ == '__main__':

@@ -76,19 +76,19 @@ TRAIN_AND_TEST_COLUMN_INDICES = ColumnIndices(dataset_col=1,
                                               num_nodes_col=37)
 
 
-PrunningParameters = collections.namedtuple('PrunningParameters',
-                                            ['use_chi_sq',
-                                             'max_chi_sq_p_value',
-                                             'min_num_values_second_most_freq_value',
-                                             'num_min_samples_allowed',
-                                             'use_second_largest_class_min_samples',
-                                             'min_samples_in_second_largest_class',
-                                             'use_monte_carlo',
-                                             'upper_p_value_threshold',
-                                             'lower_p_value_threshold',
-                                             'prob_monte_carlo',
-                                             'use_random_order',
-                                             'use_one_attrib_per_num_values'])
+PruningParameters = collections.namedtuple('PruningParameters',
+                                           ['use_chi_sq',
+                                            'max_chi_sq_p_value',
+                                            'min_num_values_second_most_freq_value',
+                                            'num_min_samples_allowed',
+                                            'use_second_largest_class_min_samples',
+                                            'min_samples_in_second_largest_class',
+                                            'use_monte_carlo',
+                                            'upper_p_value_threshold',
+                                            'lower_p_value_threshold',
+                                            'prob_monte_carlo',
+                                            'use_random_order',
+                                            'use_one_attrib_per_num_values'])
 
 def main(output_path):
     '''Calculates the t-student statistics of experiments contained in this folder.
@@ -135,11 +135,16 @@ def _load_raw_data(raw_output_path, column_indices):
             if not has_read_header:
                 has_read_header = True
                 continue
-            line_list = line.split(',')
+            line_list = line.rstrip().split(',')
 
             dataset_name = line_list[column_indices.dataset_col]
             criterion_name = line_list[column_indices.criterion_col]
             trial_number = line_list[column_indices.trial_number_col]
+
+            pruning_parameters_list = []
+            for column_index in column_indices[2:14]:
+                pruning_parameters_list.append(line_list[column_index])
+            pruning_parameters = PruningParameters(*pruning_parameters_list)
 
             accuracy_w_missing = float(line_list[column_indices.accuracy_w_missing_col])
             try:
@@ -148,9 +153,10 @@ def _load_raw_data(raw_output_path, column_indices):
                 accuracy_wo_missing = None
             num_nodes = float(line_list[column_indices.num_nodes_col])
 
-            raw_data[dataset_name][criterion_name][trial_number] = (accuracy_w_missing,
-                                                                    accuracy_wo_missing,
-                                                                    num_nodes)
+            raw_data[dataset_name][criterion_name][pruning_parameters][trial_number] = (
+                accuracy_w_missing,
+                accuracy_wo_missing,
+                num_nodes)
     return raw_data
 
 
@@ -233,8 +239,8 @@ def _save_raw_stats(raw_data, output_path):
                      p_value_num_nodes) = _calculate_t_statistic(num_nodes_diff)
                     print(','.join([dataset_name,
                                     criterion_name,
-                                    *list(map(prunning_parameters_1, str)),
-                                    *list(map(prunning_parameters_2, str)),
+                                    *list(map(str, prunning_parameters_1)),
+                                    *list(map(str, prunning_parameters_2)),
                                     str(t_statistic_w_missing),
                                     str(len(accuracy_w_missing_diff) - 1),
                                     str(p_value_w_missing),
@@ -281,13 +287,13 @@ def _save_aggreg_stats(output_path, single_sided_p_value_threshold):
             if not has_read_header:
                 has_read_header = True
                 continue
-            line_list = line.split(',')
+            line_list = line.rstrip().split(',')
 
             dataset_name = line_list[0]
             criterion_name = line_list[1]
 
-            prunning_parameters_1 = line_list[2:14]
-            prunning_parameters_2 = line_list[14:26]
+            prunning_parameters_1 = PruningParameters(*line_list[2:14])
+            prunning_parameters_2 = PruningParameters(*line_list[14:26])
 
             if (dataset_name, criterion_name, prunning_parameters_1) not in aggreg_data:
                 aggreg_data[(dataset_name,

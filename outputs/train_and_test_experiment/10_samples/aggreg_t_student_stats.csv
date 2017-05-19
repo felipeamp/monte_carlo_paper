@@ -1,0 +1,229 @@
+Dataset,Criterion Name,use_chi_sq,max_chi_sq_p_value,min_num_values_second_most_freq_value,num_min_samples_allowed,use_second_largest_class_min_samples,min_samples_in_second_largest_class,use_monte_carlo,upper_p_value_threshold,lower_p_value_threshold,prob_monte_carlo,use_random_order,use_one_attrib_per_num_values,Number of times is statistically better with missing values,Number of times is statistically better without missing values,Number of times has statistically larger number of nodes,Number of times is statistically worse with missing values,Number of times is statistically worse without missing values,Number of times has statistically smaller number of nodes
+Adult Census Income,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Adult Census Income,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Adult Census Income,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Adult Census Income,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Adult Census Income,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,1,1,0
+Adult Census Income,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,1,1
+Adult Census Income,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,0,1,1
+Adult Census Income,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,1,3,0,0,0,3
+Adult Census Income,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,1,1,0
+Adult Census Income,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,0
+Adult Census Income,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Adult Census Income,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,1,1,0,0,0,2
+Cars,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cars,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cars,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cars,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Cars,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cars,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cars,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cars,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Cars,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cars,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cars,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cars,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,0,0,0
+Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Cars with Aggreg,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,0,0,0
+Cars with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,1,0,1
+Cars with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,1,0,1
+Cars with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,2,0,0,0,0,1
+Cars with Aggreg,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,1,1,0
+Cars with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,1,1,1
+Cars with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,3,3,0,0,0,3
+Cars with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,1,1,1,1
+Contraceptive,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Contraceptive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Contraceptive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,1,1,1
+Contraceptive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,1,1,1,0,0,0
+Contraceptive,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Contraceptive,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Contraceptive,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Contraceptive,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Contraceptive,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Contraceptive,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Contraceptive,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Contraceptive,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Contraceptive with Aggreg,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,1
+Contraceptive with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Contraceptive with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
+Contraceptive with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,3,0,0,0
+Contraceptive with Aggreg,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,1,3,0
+Contraceptive with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,1,0,0,1,1
+Contraceptive with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,1,1,0,1,1
+Contraceptive with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,1,3,0,0,0,2
+Contraceptive with Aggreg,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,0,2,0
+Contraceptive with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,1,1,0,0,0
+Contraceptive with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,1,0,0,0,3
+Contraceptive with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,1,0,0,0
+Cover Type,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cover Type,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cover Type,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cover Type,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Cover Type,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cover Type,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cover Type,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cover Type,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Cover Type,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cover Type,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cover Type,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cover Type,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Cover Type with Aggreg,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,1,1,0
+Cover Type with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,1,1,0
+Cover Type with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,1,1,0
+Cover Type with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,3,3,0,0,0,0
+Cover Type with Aggreg,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,1,3,0,0,0
+Cover Type with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,1
+Cover Type with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,0,0,1
+Cover Type with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,1,3
+Cover Type with Aggreg,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,1,1,0,0,0
+Cover Type with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,1,1,0,0,0
+Cover Type with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,3
+Cover Type with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,1,0,2,0
+KDD98 Multiclass 2,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,1,1,0,0,0,0
+KDD98 Multiclass 2,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,1,0,0,0,0
+KDD98 Multiclass 2,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,0
+KDD98 Multiclass 2,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,3,3,0
+KDD98 Multiclass 2,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,0,0,0
+KDD98 Multiclass 2,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,0,1,0,0,1
+KDD98 Multiclass 2,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,0,1,0,0,1
+KDD98 Multiclass 2,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,2,0,3
+KDD98 Multiclass 2,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,0,0,0
+KDD98 Multiclass 2,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,0
+KDD98 Multiclass 2,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,2
+KDD98 Multiclass 2,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+KDD98 Multiclass 3,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,1,0,0,0,0,0
+KDD98 Multiclass 3,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,0,0,0,0,0
+KDD98 Multiclass 3,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,0,0,0,0,0
+KDD98 Multiclass 3,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,3,0,0
+KDD98 Multiclass 3,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,0,0,0
+KDD98 Multiclass 3,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,1
+KDD98 Multiclass 3,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,0,0,1
+KDD98 Multiclass 3,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,3
+KDD98 Multiclass 3,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,0,0,0
+KDD98 Multiclass 3,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,0
+KDD98 Multiclass 3,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,3
+KDD98 Multiclass 3,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,1,0,0,0
+KDD98 Multiclass 5,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,1
+KDD98 Multiclass 5,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+KDD98 Multiclass 5,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
+KDD98 Multiclass 5,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,3,0,0,0
+KDD98 Multiclass 5,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,0,0,0
+KDD98 Multiclass 5,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,0
+KDD98 Multiclass 5,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,0,0,0
+KDD98 Multiclass 5,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,3
+KDD98 Multiclass 5,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+KDD98 Multiclass 5,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+KDD98 Multiclass 5,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+KDD98 Multiclass 5,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+KDD98 Multiclass 9,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+KDD98 Multiclass 9,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+KDD98 Multiclass 9,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+KDD98 Multiclass 9,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+KDD98 Multiclass 9,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,0,0,0
+KDD98 Multiclass 9,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,0
+KDD98 Multiclass 9,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,0,0,0
+KDD98 Multiclass 9,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,3
+KDD98 Multiclass 9,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+KDD98 Multiclass 9,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+KDD98 Multiclass 9,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+KDD98 Multiclass 9,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Mushroom,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Mushroom,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Mushroom,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Mushroom,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Mushroom,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,1,1,0,0,0
+Mushroom,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,1,1,0,0,0
+Mushroom,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,1,1,0,0,0
+Mushroom,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,3,3
+Mushroom,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Mushroom,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Mushroom,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Mushroom,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Nursery,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,1,1,0,0,0,1
+Nursery,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,1,0,0,0,1
+Nursery,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,1
+Nursery,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,3,3,3,0
+Nursery,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Nursery,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Nursery,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Nursery,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Nursery,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,1,1,0,0,0,0
+Nursery,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,1,0,0,0,0
+Nursery,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,0
+Nursery,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,3,3,0
+Nursery with Aggreg,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,1
+Nursery with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Nursery with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
+Nursery with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,3,0,0,0
+Nursery with Aggreg,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,3,3,0
+Nursery with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,1,1,0,0,1
+Nursery with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,1,0,0,1
+Nursery with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,1,1,0,0,0,3
+Nursery with Aggreg,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Nursery with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Nursery with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Nursery with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Poker Hand,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Poker Hand,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Poker Hand,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Poker Hand,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Poker Hand,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,1,0,3,0,0,0
+Poker Hand,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,1
+Poker Hand,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,0,0,1
+Poker Hand,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,1,0,3
+Poker Hand,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,1,0,0,0,0
+Poker Hand,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Poker Hand,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Poker Hand,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,1,0
+Soybean,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,1
+Soybean,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Soybean,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
+Soybean,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,3,0,0,0
+Soybean,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,1,1,0
+Soybean,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,1
+Soybean,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,0,0,1
+Soybean,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,1,1,0,0,0,3
+Soybean,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Soybean,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Soybean,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Soybean,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Splice Junction,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Splice Junction,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Splice Junction,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Splice Junction,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Splice Junction,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Splice Junction,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Splice Junction,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Splice Junction,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Splice Junction,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Splice Junction,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Splice Junction,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Splice Junction,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Teaching Assistant Evaluation,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Teaching Assistant Evaluation,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Teaching Assistant Evaluation,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
+Teaching Assistant Evaluation,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,2,0,0,0
+Teaching Assistant Evaluation,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,0,0,0
+Teaching Assistant Evaluation,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Teaching Assistant Evaluation,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
+Teaching Assistant Evaluation,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,1
+Teaching Assistant Evaluation,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,0,0,0
+Teaching Assistant Evaluation,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,1,0,0,0,1
+Teaching Assistant Evaluation,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,2,1
+Teaching Assistant Evaluation,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,1,0,0,0,1
+Titanic Survive,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Titanic Survive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Titanic Survive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Titanic Survive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Titanic Survive,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Titanic Survive,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Titanic Survive,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Titanic Survive,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0
+Titanic Survive,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Titanic Survive,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Titanic Survive,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Titanic Survive,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,0

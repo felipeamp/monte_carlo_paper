@@ -9,7 +9,7 @@
         "Gain Ratio"
     ],
 
-    "output folder": "./outputs/train_and_test_experiment/with_monte_carlo_one_attrib_per_num_value/100_samples",
+    "output folder": "./outputs/train_and_test_experiment/10_samples",
 
     "num trials": 10,
     "calculate t-test on accuracy": true,
@@ -17,21 +17,61 @@
 
     "max depth": 1,
     "use cross-validation": false,
-    "num training samples": 100,
+    "num training samples": 10,
 
-    "pruning parameters list": [{
-        "use chi-sq test": false,
+    "pruning parameters list": [
+        {
+            "use chi-sq test": false,
 
-        "use monte carlo": true,
-        "monte carlo parameters": {
-            "upper p-value threshold": 0.4,
-            "lower p-value threshold": 0.1,
-            "prob monte carlo": 0.95,
-            "use random order": false,
-            "use one attrib per num values": true
+            "use monte carlo": false,
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
         },
+        {
+            "use chi-sq test": false,
 
-        "min num samples allowed": 1,
-        "use second most freq class min samples": false
-    }]
+            "use monte carlo": true,
+            "monte carlo parameters": {
+                "upper p-value threshold": 0.4,
+                "lower p-value threshold": 0.1,
+                "prob monte carlo": 0.95,
+                "use random order": false,
+                "use one attrib per num values": false
+            },
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
+        },
+        {
+            "use chi-sq test": false,
+
+            "use monte carlo": true,
+            "monte carlo parameters": {
+                "upper p-value threshold": 0.4,
+                "lower p-value threshold": 0.1,
+                "prob monte carlo": 0.95,
+                "use random order": true,
+                "use one attrib per num values": false
+            },
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
+        },
+        {
+            "use chi-sq test": false,
+
+            "use monte carlo": true,
+            "monte carlo parameters": {
+                "upper p-value threshold": 0.4,
+                "lower p-value threshold": 0.1,
+                "prob monte carlo": 0.95,
+                "use random order": false,
+                "use one attrib per num values": true
+            },
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
+        }
+    ]
 }

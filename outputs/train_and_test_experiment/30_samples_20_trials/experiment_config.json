@@ -72,6 +72,16 @@
 
             "min num samples allowed": 1,
             "use second most freq class min samples": false
+        },
+        {
+            "use chi-sq test": true,
+            "max chi-sq p-value": 0.3,
+            "second most freq value min samples": 1,
+
+            "use monte carlo": false,
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
         }
     ]
 }

@@ -634,7 +634,7 @@ class GainRatio(Criterion):
                                                     splits_values=splits_values,
                                                     criterion_value=curr_gain_ratio))
 
-        if num_tests == 0: # Just return attribute/split with maximum Gini Gain.
+        if num_tests == 0: # Just return attribute/split with maximum Gain Ratio.
             if best_splits_per_attrib:
                 best_split = max(best_splits_per_attrib, key=lambda split: split.criterion_value)
             else:
@@ -760,6 +760,177 @@ class GainRatio(Criterion):
                 values_num_samples,
                 original_information)
             if curr_gain_ratio > real_gain_ratio:
+                num_fails_seen += 1
+                if num_fails_seen > num_fails_allowed:
+                    return False, test_number
+            if num_tests - test_number <= num_fails_allowed - num_fails_seen:
+                return True, test_number
+        return True, num_tests
+
+
+
+#################################################################################################
+#################################################################################################
+###                                                                                           ###
+###                                   INFORMATION GAIN                                        ###
+###                                                                                           ###
+#################################################################################################
+#################################################################################################
+
+
+class InformationGain(Criterion):
+    """Information Gain criterion. For reference see "Quinlan, J. R. C4.5: Programs for Machine
+    Learning. Morgan Kaufmann Publishers, 1993.".
+    """
+    name = 'Information Gain'
+
+    @classmethod
+    def select_best_attribute_and_split(cls, tree_node, num_tests=0, num_fails_allowed=0):
+        """Returns the best attribute and its best split, according to the Information Gain
+        criterion, using `num_tests` tests per attribute and accepting if it doesn't fail more than
+        `num_fails_allowed` times. If `num_tests` is zero, returns the attribute/split with the
+        largest criterion value.
+        Args:
+          tree_node (TreeNode): tree node where we want to find the best attribute/split.
+          num_tests (int, optional): number of tests to be executed in each attribute, according to
+            our Monte Carlo framework. Defaults to `0`.
+          num_fails_allowed (int, optional): maximum number of fails allowed for an attribute to be
+            accepted according to our Monte Carlo framework. Defaults to `0`.
+        Returns:
+            A tuple cointaining, in order:
+                - The best split found;
+                - Total number of Monte Carlo tests needed;
+                - Position of the accepted attribute in the attributes' list ordered by the
+                criterion value.
+        """
+
+        # First we calculate the original class frequency and information
+        original_information = cls._calculate_information(tree_node.class_index_num_samples,
+                                                          len(tree_node.valid_samples_indices))
+        best_splits_per_attrib = []
+        for attrib_index, is_valid_attrib in enumerate(tree_node.valid_nominal_attribute):
+            if is_valid_attrib:
+                values_seen = cls._get_values_seen(
+                    tree_node.contingency_tables[attrib_index].values_num_samples)
+                splits_values = [set([value]) for value in values_seen]
+                curr_information_gain = cls._calculate_information_gain(
+                    len(tree_node.valid_samples_indices),
+                    tree_node.contingency_tables[attrib_index].contingency_table,
+                    tree_node.contingency_tables[attrib_index].values_num_samples,
+                    original_information)
+                best_splits_per_attrib.append(Split(attrib_index=attrib_index,
+                                                    splits_values=splits_values,
+                                                    criterion_value=curr_information_gain))
+
+        if num_tests == 0: # Just return attribute/split with maximum Information Gain.
+            if best_splits_per_attrib:
+                best_split = max(best_splits_per_attrib, key=lambda split: split.criterion_value)
+            else:
+                best_split = Split()
+            num_monte_carlo_tests_needed = 0
+            position_of_accepted = 1
+            return (best_split, num_monte_carlo_tests_needed, position_of_accepted)
+        else: # use Monte Carlo approach.
+            if ORDER_RANDOMLY:
+                random.shuffle(best_splits_per_attrib)
+            else:
+                best_splits_per_attrib.sort(key=lambda split: -split.criterion_value)
+                if USE_ONE_ATTRIB_PER_NUM_VALUES:
+                    best_splits_per_attrib_clean = []
+                    num_values_seen = set()
+                    for curr_split in best_splits_per_attrib:
+                        num_values = len(curr_split.splits_values)
+                        if num_values not in num_values_seen:
+                            num_values_seen.add(num_values)
+                            best_splits_per_attrib_clean.append(curr_split)
+                    best_splits_per_attrib = best_splits_per_attrib_clean
+
+            total_num_tests_needed = 0
+            for curr_position, best_attrib_split in enumerate(best_splits_per_attrib):
+                (should_accept,
+                 num_tests_needed) = cls._accept_attribute(
+                     best_attrib_split.criterion_value,
+                     num_tests,
+                     num_fails_allowed,
+                     len(tree_node.valid_samples_indices),
+                     tree_node.class_index_num_samples,
+                     tree_node.contingency_tables[
+                         best_attrib_split.attrib_index].values_num_samples)
+                total_num_tests_needed += num_tests_needed
+                if should_accept:
+                    return (best_attrib_split, total_num_tests_needed, curr_position + 1)
+            return (Split(), total_num_tests_needed, None)
+
+    @staticmethod
+    def _get_values_seen(values_num_samples):
+        values_seen = set()
+        for value, num_samples in enumerate(values_num_samples):
+            if num_samples > 0:
+                values_seen.add(value)
+        return values_seen
+
+    @classmethod
+    def _calculate_information_gain(cls, num_valid_samples, contingency_table, values_num_samples,
+                                    original_information):
+        information_gain = original_information # Initial Information Gain
+        for value, value_num_samples in enumerate(values_num_samples):
+            if value_num_samples == 0:
+                continue
+            curr_split_information = cls._calculate_information(contingency_table[value],
+                                                                value_num_samples)
+            information_gain -= (value_num_samples / num_valid_samples) * curr_split_information
+        return information_gain
+
+    @staticmethod
+    def _calculate_information(class_index_num_samples, num_valid_samples):
+        information = 0.0
+        for curr_class_num_samples in class_index_num_samples:
+            if curr_class_num_samples != 0:
+                curr_frequency = curr_class_num_samples / num_valid_samples
+                information -= curr_frequency * math.log2(curr_frequency)
+        return information
+
+    @staticmethod
+    def _generate_random_contingency_table(classes_dist, num_valid_samples, values_num_samples):
+        # TESTED!
+        random_classes = np.random.choice(len(classes_dist),
+                                          num_valid_samples,
+                                          replace=True,
+                                          p=classes_dist)
+        random_contingency_table = np.zeros((values_num_samples.shape[0], len(classes_dist)),
+                                            dtype=float)
+        samples_done = 0
+        for value, value_num_samples in enumerate(values_num_samples):
+            if value_num_samples > 0:
+                for class_index in random_classes[samples_done: samples_done + value_num_samples]:
+                    random_contingency_table[value, class_index] += 1
+                samples_done += value_num_samples
+        return random_contingency_table
+
+    @classmethod
+    def _accept_attribute(cls, real_information_gain, num_tests, num_fails_allowed,
+                          num_valid_samples, class_index_num_samples, values_num_samples):
+        num_classes = len(class_index_num_samples)
+        classes_dist = class_index_num_samples[:]
+        for class_index in range(num_classes):
+            classes_dist[class_index] /= float(num_valid_samples)
+
+        num_fails_seen = 0
+        for test_number in range(1, num_tests + 1):
+            random_contingency_table = cls._generate_random_contingency_table(
+                classes_dist,
+                num_valid_samples,
+                values_num_samples)
+            new_class_index_num_samples = np.sum(random_contingency_table, axis=0).tolist()
+
+            original_information = cls._calculate_information(new_class_index_num_samples,
+                                                              num_valid_samples)
+            curr_information_gain = cls._calculate_information_gain(
+                num_valid_samples,
+                random_contingency_table,
+                values_num_samples,
+                original_information)
+            if curr_information_gain > real_information_gain:
                 num_fails_seen += 1
                 if num_fails_seen > num_fails_allowed:
                     return False, test_number

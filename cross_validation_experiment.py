@@ -267,6 +267,8 @@ def get_criteria(criteria_names_list):
             criteria_list.append(criteria.Twoing())
         elif criterion_name == "Gain Ratio":
             criteria_list.append(criteria.GainRatio())
+        elif criterion_name == "Information Gain":
+            criteria_list.append(criteria.InformationGain())
         else:
             print('Unkown criterion name:', criterion_name)
             print('Exiting.')

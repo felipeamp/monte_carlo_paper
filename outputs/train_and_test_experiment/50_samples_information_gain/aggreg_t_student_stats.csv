@@ -1,0 +1,115 @@
+Dataset,Criterion Name,use_chi_sq,max_chi_sq_p_value,min_num_values_second_most_freq_value,num_min_samples_allowed,use_second_largest_class_min_samples,min_samples_in_second_largest_class,use_monte_carlo,upper_p_value_threshold,lower_p_value_threshold,prob_monte_carlo,use_random_order,use_one_attrib_per_num_values,Number of times is statistically better with missing values,Number of times is statistically better without missing values,Number of times has statistically larger number of nodes,Number of times is statistically worse with missing values,Number of times is statistically worse without missing values,Number of times has statistically smaller number of nodes
+Adult Census Income,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Adult Census Income,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Adult Census Income,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Adult Census Income,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Adult Census Income,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Adult Census Income,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cars,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cars,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cars,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cars,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cars,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cars,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cars with Aggreg,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,5,0,0,0
+Cars with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Cars with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,2,0,0,1
+Cars with Aggreg,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,2,0,0,1
+Cars with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,3
+Cars with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,3
+Contraceptive,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,2,1,1,0
+Contraceptive,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Contraceptive,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,1
+Contraceptive,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Contraceptive,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Contraceptive,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Contraceptive with Aggreg,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,5,0,2,0
+Contraceptive with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,1,0,0,0,1
+Contraceptive with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,1
+Contraceptive with Aggreg,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,1,0,1
+Contraceptive with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Contraceptive with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
+Cover Type,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cover Type,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cover Type,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cover Type,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cover Type,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cover Type,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cover Type with Aggreg,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cover Type with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cover Type with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Cover Type with Aggreg,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cover Type with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cover Type with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+KDD98 Multiclass 2,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,3,3,3,0
+KDD98 Multiclass 2,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,3,3,0
+KDD98 Multiclass 2,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,3,3,0
+KDD98 Multiclass 2,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,3,3,0,0,0,1
+KDD98 Multiclass 2,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,3,3,0,0,0,1
+KDD98 Multiclass 2,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,3,3,0,0,0,1
+KDD98 Multiclass 3,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,5,5,5,0
+KDD98 Multiclass 3,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,1,0,0,0,1
+KDD98 Multiclass 3,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,1
+KDD98 Multiclass 3,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,1,1,0,0,0,1
+KDD98 Multiclass 3,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,1,1,0,0,0,1
+KDD98 Multiclass 3,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,1
+KDD98 Multiclass 5,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,5,5,5,0
+KDD98 Multiclass 5,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,1,2,2,2,1
+KDD98 Multiclass 5,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,2,2,2,1
+KDD98 Multiclass 5,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,1,1,0,0,0,1
+KDD98 Multiclass 5,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,3,3,0,0,0,3
+KDD98 Multiclass 5,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,3,3,0,0,0,3
+KDD98 Multiclass 9,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,5,5,5,0
+KDD98 Multiclass 9,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,1,3,3,3,1
+KDD98 Multiclass 9,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,3,3,3,1
+KDD98 Multiclass 9,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,3,3,0,0,0,3
+KDD98 Multiclass 9,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,3,3,0,0,0,3
+KDD98 Multiclass 9,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,3,3,0,0,0,3
+Mushroom,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Mushroom,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Mushroom,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Mushroom,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Mushroom,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Mushroom,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Nursery,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Nursery,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Nursery,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Nursery,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Nursery,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Nursery,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Nursery with Aggreg,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,5,5,5,0
+Nursery with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,1,0,0,0,1
+Nursery with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,1
+Nursery with Aggreg,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,1,1,0,0,0,1
+Nursery with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,1,1,0,0,0,1
+Nursery with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,1
+Poker Hand,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,4,0,0,0
+Poker Hand,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Poker Hand,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
+Poker Hand,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,2,0,0,0
+Poker Hand,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,2
+Poker Hand,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,2
+Soybean,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Soybean,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Soybean,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Soybean,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Soybean,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Soybean,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Splice Junction,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Splice Junction,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Splice Junction,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Splice Junction,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Splice Junction,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Splice Junction,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Teaching Assistant Evaluation,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,5,0,0,0
+Teaching Assistant Evaluation,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Teaching Assistant Evaluation,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
+Teaching Assistant Evaluation,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,2,0,0,1
+Teaching Assistant Evaluation,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,2
+Teaching Assistant Evaluation,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,2
+Titanic Survive,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Titanic Survive,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Titanic Survive,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0
+Titanic Survive,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Titanic Survive,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Titanic Survive,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0

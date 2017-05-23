@@ -6,7 +6,8 @@
     "criteria": [
         "Gini Gain",
         "Twoing",
-        "Gain Ratio"
+        "Gain Ratio",
+        "Information Gain"
     ],
 
     "output folder": "./outputs/train_and_test_experiment/30_samples_20_trials",

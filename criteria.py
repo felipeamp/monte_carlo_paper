@@ -1141,7 +1141,9 @@ class ConditionalInferenceTreeTwoing(Criterion):
                         best_total_gini_gain = curr_gini_gain
                         best_left_values = left_values
                         best_right_values = right_values
-                best_split.splits_values = [best_left_values, best_right_values]
+                best_split = Split(attrib_index=best_split.attrib_index,
+                                   splits_values=[best_left_values, best_right_values],
+                                   criterion_value=best_split.criterion_value)
             else:
                 best_split = Split()
             num_monte_carlo_tests_needed = 0

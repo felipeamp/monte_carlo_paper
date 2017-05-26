@@ -1020,7 +1020,7 @@ class ConditionalInferenceTreeMultiway(Criterion):
             return (1./num_valid_samples) * np.array(class_index_num_samples)
 
         def _calculate_covariance_h(expected_value_h, class_index_num_samples, num_valid_samples):
-            num_classes = class_index_num_samples.shape[0]
+            num_classes = len(class_index_num_samples)
             covariance_h = np.zeros((num_classes, num_classes))
             for class_index, class_num_samples in enumerate(class_index_num_samples):
                 if class_num_samples:
@@ -1165,7 +1165,7 @@ class ConditionalInferenceTreeTwoing(Criterion):
             return (1./num_valid_samples) * np.array(class_index_num_samples)
 
         def _calculate_covariance_h(expected_value_h, class_index_num_samples, num_valid_samples):
-            num_classes = class_index_num_samples.shape[0]
+            num_classes = len(class_index_num_samples)
             covariance_h = np.zeros((num_classes, num_classes))
             for class_index, class_num_samples in enumerate(class_index_num_samples):
                 if class_num_samples:

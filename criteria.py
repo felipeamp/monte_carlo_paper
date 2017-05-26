@@ -1034,22 +1034,14 @@ class ConditionalInferenceTreeMultiway(Criterion):
             return np.outer(values_num_samples, expected_value_h).flatten(order='F')
 
         def _calculate_sigma_j(values_num_samples, num_valid_samples, covariance_h):
-            num_values = values_num_samples.shape[0]
-
-            temp = np.zeros((num_values, num_values))
-            for value_index, value_num_samples in enumerate(values_num_samples):
-                if value_num_samples:
-                    curr_value_one_hot_encoding = np.zeros((num_values, 1))
-                    curr_value_one_hot_encoding[value_index] = 1.
-                    temp += value_num_samples * np.kron(curr_value_one_hot_encoding,
-                                                        curr_value_one_hot_encoding.transpose())
             values_num_samples_correct_dim = values_num_samples.reshape(
                 (values_num_samples.shape[0], 1))
-            return ((num_valid_samples / (num_valid_samples - 1)) * np.kron(covariance_h, temp)
-                    - (1 / (num_valid_samples - 1)) * np.kron(
-                        covariance_h,
-                        np.kron(values_num_samples_correct_dim,
-                                values_num_samples_correct_dim.transpose())))
+            return (((num_valid_samples / (num_valid_samples - 1))
+                     * np.kron(covariance_h, np.diag(values_num_samples)))
+                    - ((1 / (num_valid_samples - 1))
+                       * np.kron(covariance_h,
+                                 np.kron(values_num_samples_correct_dim,
+                                         values_num_samples_correct_dim.transpose()))))
 
 
         expected_value_h = _calculate_expected_value_h(class_index_num_samples, num_valid_samples)
@@ -1059,8 +1051,8 @@ class ConditionalInferenceTreeMultiway(Criterion):
         mu_j = _calculate_mu_j(values_num_samples, expected_value_h)
         sigma_j = _calculate_sigma_j(values_num_samples, num_valid_samples, covariance_h)
 
-        temp_diff = contingency_table - mu_j
-        c_quad = np.dot(temp_diff, np.dot(np.linalg.pinv(sigma_j), temp_diff))
+        temp_diff = contingency_table.flatten(order='F') - mu_j
+        c_quad = np.dot(temp_diff, np.dot(np.linalg.pinv(sigma_j), temp_diff.transpose()))
         return chi2.cdf(x=c_quad, df=np.linalg.matrix_rank(sigma_j))
 
 
@@ -1179,22 +1171,14 @@ class ConditionalInferenceTreeTwoing(Criterion):
             return np.outer(values_num_samples, expected_value_h).flatten(order='F')
 
         def _calculate_sigma_j(values_num_samples, num_valid_samples, covariance_h):
-            num_values = values_num_samples.shape[0]
-
-            temp = np.zeros((num_values, num_values))
-            for value_index, value_num_samples in enumerate(values_num_samples):
-                if value_num_samples:
-                    curr_value_one_hot_encoding = np.zeros((num_values, 1))
-                    curr_value_one_hot_encoding[value_index] = 1.
-                    temp += value_num_samples * np.kron(curr_value_one_hot_encoding,
-                                                        curr_value_one_hot_encoding.transpose())
             values_num_samples_correct_dim = values_num_samples.reshape(
                 (values_num_samples.shape[0], 1))
-            return ((num_valid_samples / (num_valid_samples - 1)) * np.kron(covariance_h, temp)
-                    - (1 / (num_valid_samples - 1)) * np.kron(
-                        covariance_h,
-                        np.kron(values_num_samples_correct_dim,
-                                values_num_samples_correct_dim.transpose())))
+            return (((num_valid_samples / (num_valid_samples - 1))
+                     * np.kron(covariance_h, np.diag(values_num_samples)))
+                    - ((1 / (num_valid_samples - 1))
+                       * np.kron(covariance_h,
+                                 np.kron(values_num_samples_correct_dim,
+                                         values_num_samples_correct_dim.transpose()))))
 
 
         expected_value_h = _calculate_expected_value_h(class_index_num_samples, num_valid_samples)
@@ -1204,7 +1188,7 @@ class ConditionalInferenceTreeTwoing(Criterion):
         mu_j = _calculate_mu_j(values_num_samples, expected_value_h)
         sigma_j = _calculate_sigma_j(values_num_samples, num_valid_samples, covariance_h)
 
-        temp_diff = contingency_table - mu_j
+        temp_diff = contingency_table.flatten(order='F') - mu_j
         c_quad = np.dot(temp_diff, np.dot(np.linalg.pinv(sigma_j), temp_diff))
         return chi2.cdf(x=c_quad, df=np.linalg.matrix_rank(sigma_j))
 

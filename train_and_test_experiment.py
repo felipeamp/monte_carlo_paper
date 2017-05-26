@@ -272,6 +272,10 @@ def get_criteria(criteria_names_list):
             criteria_list.append(criteria.GainRatio())
         elif criterion_name == "Information Gain":
             criteria_list.append(criteria.InformationGain())
+        elif criterion_name == "Conditional Inference Tree Multiway":
+            criteria_list.append(criteria.ConditionalInferenceTreeMultiway())
+        elif criterion_name == "Conditional Inference Tree Twoing":
+            criteria_list.append(criteria.ConditionalInferenceTreeTwoing())
         else:
             print('Unkown criterion name:', criterion_name)
             print('Exiting.')

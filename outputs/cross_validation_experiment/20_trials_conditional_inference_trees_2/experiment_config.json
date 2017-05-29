@@ -1,0 +1,43 @@
+{
+    "datasets basepath": "./datasets",
+    "use all datasets": false,
+    "load one dataset at a time": false,
+    "datasets folders": [
+        "mushroom",
+        "nursery",
+        "nursery with aggreg",
+        "poker hand",
+        "soy",
+        "splice junction",
+        "teaching assistant evaluation",
+        "tic-tac-toe endgame",
+        "titanic survive"
+    ],
+
+    "criteria": [
+        "Conditional Inference Tree Multiway",
+        "Conditional Inference Tree Twoing"
+    ],
+
+    "output folder": "./outputs/cross_validation_experiment/20_trials_conditional_inference_trees_2",
+
+    "num trials": 20,
+    "calculate t-test on accuracy": true,
+    "t-test single-sided p-value": 0.05,
+
+    "max depth": 5,
+    "use cross-validation": true,
+    "num folds": 3,
+    "is stratified": true,
+
+    "pruning parameters list": [
+        {
+            "use chi-sq test": false,
+
+            "use monte carlo": false,
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
+        }
+    ]
+}

@@ -1,0 +1,82 @@
+{
+    "datasets basepath": "./datasets",
+    "use all datasets": true,
+    "load one dataset at a time": false,
+
+    "criteria": [
+
+"Conditional Inference Tree Multiway",
+"Conditional Inference Tree Twoing"
+
+    ],
+
+
+
+
+    "output folder": "./outputs/cross_validation_experiment/20_trials_conditional_inference_trees",
+
+    "num trials": 20,
+    "calculate t-test on accuracy": true,
+    "t-test single-sided p-value": 0.05,
+
+    "max depth": 5,
+    "use cross-validation": true,
+    "num folds": 3,
+    "is stratified": true,
+
+    "pruning parameters list": [
+        {
+            "use chi-sq test": false,
+
+            "use monte carlo": false,
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ]
+}

@@ -13,7 +13,7 @@ import math
 import random
 
 import numpy as np
-from scipy.stats import chi2
+import scipy
 
 
 #: Whether Monte Carlo Framework should order attributes randomly or in decreasing criterion value.
@@ -1052,8 +1052,29 @@ class ConditionalInferenceTreeMultiway(Criterion):
         sigma_j = _calculate_sigma_j(values_num_samples, num_valid_samples, covariance_h)
 
         temp_diff = contingency_table.flatten(order='F') - mu_j
-        c_quad = np.dot(temp_diff, np.dot(np.linalg.pinv(sigma_j), temp_diff.transpose()))
-        return chi2.cdf(x=c_quad, df=np.linalg.matrix_rank(sigma_j))
+
+        curr_rcond = 1e-15
+        while True:
+            try:
+                sigma_j_pinv = np.linalg.pinv(sigma_j)
+                sigma_j_rank = np.linalg.matrix_rank(sigma_j)
+                break
+            except np.linalg.linalg.LinAlgError:
+                # Happens when sigma_j is (very) badly conditioned
+                pass
+            try:
+                (sigma_j_pinv, sigma_j_rank) = scipy.linalg.pinv(sigma_j, return_rank=True)
+                break
+            except:
+                # Happens when sigma_j is (very) badly conditioned
+                curr_rcond *= 10.
+                if curr_rcond > 1e-6:
+                    # We give up on this attribute
+                    print('Warning: attribute has sigma_j matrix that is not decomposable in SVD.')
+                    return float('-inf')
+
+        c_quad = np.dot(temp_diff, np.dot(sigma_j_pinv, temp_diff.transpose()))
+        return scipy.stats.chi2.cdf(x=c_quad, df=sigma_j_rank)
 
 
 
@@ -1191,8 +1212,29 @@ class ConditionalInferenceTreeTwoing(Criterion):
         sigma_j = _calculate_sigma_j(values_num_samples, num_valid_samples, covariance_h)
 
         temp_diff = contingency_table.flatten(order='F') - mu_j
-        c_quad = np.dot(temp_diff, np.dot(np.linalg.pinv(sigma_j), temp_diff))
-        return chi2.cdf(x=c_quad, df=np.linalg.matrix_rank(sigma_j))
+
+        curr_rcond = 1e-15
+        while True:
+            try:
+                sigma_j_pinv = np.linalg.pinv(sigma_j)
+                sigma_j_rank = np.linalg.matrix_rank(sigma_j)
+                break
+            except np.linalg.linalg.LinAlgError:
+                # Happens when sigma_j is (very) badly conditioned
+                pass
+            try:
+                (sigma_j_pinv, sigma_j_rank) = scipy.linalg.pinv(sigma_j, return_rank=True)
+                break
+            except:
+                # Happens when sigma_j is (very) badly conditioned
+                curr_rcond *= 10.
+                if curr_rcond > 1e-6:
+                    # We give up on this attribute
+                    print('Warning: attribute has sigma_j matrix that is not decomposable in SVD.')
+                    return float('-inf')
+
+        c_quad = np.dot(temp_diff, np.dot(sigma_j_pinv, temp_diff.transpose()))
+        return scipy.stats.chi2.cdf(x=c_quad, df=sigma_j_rank)
 
     @staticmethod
     def _get_values_seen(values_num_samples):

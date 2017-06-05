@@ -188,6 +188,22 @@ Cover Type with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,Tru
 Cover Type with Aggreg,Twoing,True,0.3,1,1,False,None,False,None,None,None,None,None,0,1,2,0,0,0
 Cover Type with Aggreg,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,1,2,0,0,0
 Cover Type with Aggreg,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,1,0,0,0,5
+Credit Approval,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Credit Approval,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Credit Approval,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Credit Approval,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Credit Approval,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Credit Approval,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Credit Approval,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Credit Approval,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Flags,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Flags,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Flags,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,1,0,0
+Flags,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,0,0,0,0,1
+Flags,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,1,0,0
+Flags,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,0,0,0,0,1
+Flags,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Flags,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
 KDD98 Multiclass 2,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,1,1,0,0,0,0
 KDD98 Multiclass 2,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,1,1,0,0,0,0
 KDD98 Multiclass 2,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,1,1,0,0,0,0
@@ -485,6 +501,14 @@ Teaching Assistant Evaluation,Twoing,False,None,None,1,False,None,True,0.4,0.1,0
 Teaching Assistant Evaluation,Twoing,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,3,0,0,0
 Teaching Assistant Evaluation,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,1,0,2
 Teaching Assistant Evaluation,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,1,0,2
+Tic-Tac-Toe Endgame,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
 Titanic Survive,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
 Titanic Survive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
 Titanic Survive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0

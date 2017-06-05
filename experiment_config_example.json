@@ -9,6 +9,8 @@
     //     "contraceptive with aggreg",
     //     "cover type",
     //     "cover type with aggreg",
+    //     "credit approval",
+    //     "flags",
     //     "kdd98 multiclass 2",
     //     "kdd98 multiclass 3",
     //     "kdd98 multiclass 5",
@@ -20,6 +22,7 @@
     //     "soy",
     //     "splice junction",
     //     "teaching assistant evaluation",
+    //     "tic-tac-toe endgame",
     //     "titanic survive"
     // ],
     "load one dataset at a time": false,

@@ -53,33 +53,14 @@ Cars,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,6,6,0,0,0,
 Cars,Twoing,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,1,1,1,0
 Cars,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,1,1,0
 Cars,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,1,1,0
-Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,6,0,0,0
-Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,1
-Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,0,0,1
-Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,6
-Cars with Aggreg,Gain Ratio,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,1,0,0,1
-Cars with Aggreg,Gain Ratio,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,1
-Cars with Aggreg,Gain Ratio,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,0,0,1
-Cars with Aggreg,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,4,0,6,0,0,0
-Cars with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,0,0,1
-Cars with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,1,0,1
-Cars with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,6
-Cars with Aggreg,Gini Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,3,1,0,1
-Cars with Aggreg,Gini Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,1,1,0,2
-Cars with Aggreg,Gini Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,1,1,0,2
-Cars with Aggreg,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,3,0,5,0,0,0
-Cars with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
-Cars with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,1
-Cars with Aggreg,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,2,1,0,1
-Cars with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,1,0,2
-Cars with Aggreg,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,1,0,2
-Cars with Aggreg,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,1,0,5,1,2,0
-Cars with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,2,2,0,0,0,1
-Cars with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,4,2,0,0,0,2
-Cars with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,True,False,0,0,0,0,0,2
-Cars with Aggreg,Twoing,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,2,3,2,0
-Cars with Aggreg,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,2,0,1
-Cars with Aggreg,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,1,0,1
+Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Cars with Aggreg,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Cars with Aggreg,Gini Gain,False,None,None,1,False,None,False,None,None,None,None,None,1,0,1,0,0,0
+Cars with Aggreg,Gini Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,1,0,1
+Cars with Aggreg,Information Gain,False,None,None,1,False,None,False,None,None,None,None,None,1,0,1,0,0,0
+Cars with Aggreg,Information Gain,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,1,0,1
+Cars with Aggreg,Twoing,False,None,None,1,False,None,False,None,None,None,None,None,0,0,1,0,0,0
+Cars with Aggreg,Twoing,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
 Contraceptive,Gain Ratio,False,None,None,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
 Contraceptive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
 Contraceptive,Gain Ratio,False,None,None,1,False,None,True,0.4,0.1,0.95,False,True,0,0,0,0,0,0

@@ -135,6 +135,8 @@ def _load_raw_data(raw_output_path, column_indices):
             if not has_read_header:
                 has_read_header = True
                 continue
+            if not line:
+                continue
             line_list = line.rstrip().split(',')
 
             dataset_name = line_list[column_indices.dataset_col]

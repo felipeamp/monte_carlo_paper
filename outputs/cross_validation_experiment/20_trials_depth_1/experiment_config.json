@@ -1,0 +1,49 @@
+{
+    "datasets basepath": "./datasets",
+    "use all datasets": true,
+    "load one dataset at a time": false,
+
+    "criteria": [
+        "Gini Gain",
+        "Twoing",
+        "Information Gain",
+        "Gain Ratio"
+    ],
+
+    "output folder": "./outputs/cross_validation_experiment/20_trials_depth_1",
+
+    "num trials": 20,
+    "calculate t-test on accuracy": true,
+    "t-test single-sided p-value": 0.05,
+
+    "max depth": 1,
+    "use cross-validation": true,
+    "num folds": 3,
+    "is stratified": true,
+
+    "pruning parameters list": [
+        {
+            "use chi-sq test": false,
+
+            "use monte carlo": false,
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
+        },
+        {
+            "use chi-sq test": false,
+
+            "use monte carlo": true,
+            "monte carlo parameters": {
+                "upper p-value threshold": 0.4,
+                "lower p-value threshold": 0.1,
+                "prob monte carlo": 0.95,
+                "use random order": false,
+                "use one attrib per num values": false
+            },
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
+        }
+    ]
+}

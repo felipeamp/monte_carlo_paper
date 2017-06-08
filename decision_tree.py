@@ -1034,7 +1034,6 @@ class TreeNode(object):
         else:
             self.total_expected_num_tests = 0.0
 
-
         # Get best split. Note that self is the current TreeNode.
         (best_split,
          total_num_tests_needed,

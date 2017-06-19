@@ -1,0 +1,25 @@
+Dataset,Criterion Name,use_chi_sq,max_chi_sq_p_value,min_num_values_second_most_freq_value,num_min_samples_allowed,use_second_largest_class_min_samples,min_samples_in_second_largest_class,use_monte_carlo,upper_p_value_threshold,lower_p_value_threshold,prob_monte_carlo,use_random_order,use_one_attrib_per_num_values,Number of times is statistically better with missing values,Number of times is statistically better without missing values,Number of times has statistically larger number of nodes,Number of times is statistically worse with missing values,Number of times is statistically worse without missing values,Number of times has statistically smaller number of nodes
+Credit Approval,Gain Ratio,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Credit Approval,Gain Ratio,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Credit Approval,Gini Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Credit Approval,Gini Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Credit Approval,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Credit Approval,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Credit Approval,Twoing,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Credit Approval,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Flags,Gain Ratio,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Flags,Gain Ratio,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Flags,Gini Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,1,1,0,0
+Flags,Gini Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,1,0,0,0,0,1
+Flags,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,1,0,0,0
+Flags,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,1
+Flags,Twoing,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Flags,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Gain Ratio,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Gain Ratio,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Gini Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Gini Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Information Gain,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Information Gain,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Twoing,True,0.3,1,1,False,None,False,None,None,None,None,None,0,0,0,0,0,0
+Tic-Tac-Toe Endgame,Twoing,True,0.3,1,1,False,None,True,0.4,0.1,0.95,False,False,0,0,0,0,0,0

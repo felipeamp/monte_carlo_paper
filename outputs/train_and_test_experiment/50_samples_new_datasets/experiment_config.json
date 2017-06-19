@@ -1,0 +1,57 @@
+{
+    "datasets basepath": "./datasets",
+    "use all datasets": false,
+    "load one dataset at a time": false,
+    "datasets folders": [
+        "credit approval",
+        "flags",
+        "tic-tac-toe endgame"
+    ],
+
+    "criteria": [
+        "Gini Gain",
+        "Twoing",
+        "Gain Ratio",
+        "Information Gain"
+    ],
+
+    "output folder": "./outputs/train_and_test_experiment/50_samples_new_datasets",
+
+    "num trials": 20,
+    "calculate t-test on accuracy": true,
+    "t-test single-sided p-value": 0.05,
+
+    "max depth": 1,
+    "use cross-validation": false,
+    "num training samples": 50,
+
+    "pruning parameters list": [
+        {
+            "use chi-sq test": true,
+            "max chi-sq p-value": 0.3,
+            "second most freq value min samples": 1,
+
+            "use monte carlo": false,
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
+        },
+        {
+            "use chi-sq test": true,
+            "max chi-sq p-value": 0.3,
+            "second most freq value min samples": 1,
+
+            "use monte carlo": true,
+            "monte carlo parameters": {
+                "upper p-value threshold": 0.4,
+                "lower p-value threshold": 0.1,
+                "prob monte carlo": 0.95,
+                "use random order": false,
+                "use one attrib per num values": false
+            },
+
+            "min num samples allowed": 1,
+            "use second most freq class min samples": false
+        }
+    ]
+}

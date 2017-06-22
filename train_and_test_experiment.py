@@ -47,7 +47,17 @@ def main(experiment_config):
     raw_output_filepath = os.path.join(experiment_config["output folder"], 'raw_output.csv')
     with open(raw_output_filepath, 'w') as fout:
         init_raw_output_csv(fout, output_split_char=',')
-        criteria_list = get_criteria(experiment_config["criteria"])
+        criteria_list, has_monte_carlo_crit = get_criteria(experiment_config["criteria"])
+
+        if has_monte_carlo_crit and experiment_config["max depth"] == 1:
+            raw_p_value_output_filepath = os.path.join(experiment_config["output folder"],
+                                                       'raw_p_value_output.csv')
+            # File descriptor below is not closed until the program ends, but we would like that
+            # behavior anyway.
+            p_value_fout = open(raw_p_value_output_filepath, 'w')
+            init_raw_p_value_output_csv(p_value_fout, output_split_char=',')
+        else:
+            p_value_fout = None
 
         if "starting seed index" not in experiment_config:
             starting_seed = 1
@@ -130,6 +140,7 @@ def main(experiment_config):
                         prob_monte_carlo=prob_monte_carlo,
                         use_one_attrib_per_num_values=use_one_attrib_per_num_values,
                         output_file_descriptor=fout,
+                        p_values_output_file_descriptor=p_value_fout,
                         output_split_char=',')
         else:
             datasets = dataset.load_all_datasets(datasets_configs)
@@ -194,6 +205,7 @@ def main(experiment_config):
                         prob_monte_carlo=prob_monte_carlo,
                         use_one_attrib_per_num_values=use_one_attrib_per_num_values,
                         output_file_descriptor=fout,
+                        p_values_output_file_descriptor=p_value_fout,
                         output_split_char=',')
 
 
@@ -259,10 +271,14 @@ def init_raw_output_csv(raw_output_file_descriptor, output_split_char=','):
 
 
 def get_criteria(criteria_names_list):
-    """Given a list of criteria names, returns a list of all there criteria (as `Criterion`'s).
+    """Given a list of criteria names, returns a list of all the criteria (as `Criterion`'s) and
+    a boolean indicating wether one of them is a Monte Carlo criterion, that is, will save p-value
+    information.
+
     If a criterion name is unkown, the system will exit the experiment.
     """
     criteria_list = []
+    has_monte_carlo_crit = False
     for criterion_name in criteria_names_list:
         if criterion_name == "Gini Gain":
             criteria_list.append(criteria.GiniGain())
@@ -276,20 +292,56 @@ def get_criteria(criteria_names_list):
             criteria_list.append(criteria.ConditionalInferenceTreeMultiway())
         elif criterion_name == "Conditional Inference Tree Twoing":
             criteria_list.append(criteria.ConditionalInferenceTreeTwoing())
+        elif criterion_name == "Gini Gain Monte Carlo":
+            criteria_list.append(criteria.GiniGainMonteCarlo())
+            has_monte_carlo_crit = True
+        elif criterion_name == "Twoing Monte Carlo":
+            criteria_list.append(criteria.TwoingMonteCarlo())
+            has_monte_carlo_crit = True
+        elif criterion_name == "Gain Ratio Monte Carlo":
+            criteria_list.append(criteria.GainRatioMonteCarlo())
+            has_monte_carlo_crit = True
+        elif criterion_name == "Information Gain Monte Carlo":
+            criteria_list.append(criteria.InformationGainMonteCarlo())
+            has_monte_carlo_crit = True
         else:
             print('Unkown criterion name:', criterion_name)
             print('Exiting.')
             sys.exit(1)
-    return criteria_list
+    return criteria_list, has_monte_carlo_crit
+
+
+def init_raw_p_value_output_csv(raw_p_value_fout, output_split_char=','):
+    """Writes the header to the raw p-value output CSV file.
+    """
+    fields_list = ['Date Time',
+                   'Dataset',
+                   'Number of Training Samples',
+                   'Trial Number',
+                   'Criterion',
+                   'Number of Valid Attributes (m)',
+                   'Number of Monte Carlo Simulations per attribute',
+
+                   'Attribute Name',
+                   'Number of Attribute Values Known while Training',
+                   'Attribute\'s Position by Criterion Value',
+                   'Attribute\'s Best Split Criterion Value',
+                   'Attribute\'s Criterion\'s Value Estimated p-value (between 0.0 and 1.0)']
+
+    print(output_split_char.join(fields_list), file=raw_p_value_fout)
+    raw_p_value_fout.flush()
 
 
 def run(dataset_name, train_dataset, num_training_samples, criterion, min_num_samples_allowed,
         max_depth, num_trials, starting_seed, use_chi_sq_test, max_p_value_chi_sq, use_monte_carlo,
         is_random_ordering, upper_p_value_threshold, lower_p_value_threshold, prob_monte_carlo,
-        use_one_attrib_per_num_values, output_file_descriptor, output_split_char=',', seed=None):
+        use_one_attrib_per_num_values, output_file_descriptor, p_values_output_file_descriptor,
+        output_split_char=',', seed=None):
     """Runs `num_trials` experiments, each one randomly selecting `num_training_samples` valid
     samples to use for training and testing the tree in the rest of the dataset. Saves the training
-    and classification information in the `output_file_descriptor` file.
+    and classification information in the `output_file_descriptor` file and, if using Monte Carlo
+    criteria, saves the attributes' p-value information in the `p_values_output_file_descriptor`
+    file.
     """
     if seed is not None:
         random.seed(seed)
@@ -433,6 +485,13 @@ def run(dataset_name, train_dataset, num_training_samples, criterion, min_num_sa
                         num_nodes_found, max_depth_found, num_nodes_prunned, output_split_char,
                         output_file_descriptor)
 
+        if criterion.name.endswith('Monte Carlo') and max_depth == 1:
+            curr_p_values = criteria.LAST_P_VALUES
+            save_p_values_info(dataset_name, num_training_samples, trial_number, criterion.name,
+                               num_valid_nominal_attributes, criteria.NUM_MONTE_CARLO_SIMULATIONS,
+                               curr_p_values, train_dataset, output_split_char,
+                               p_values_output_file_descriptor)
+
 
 def save_trial_info(dataset_name, num_total_samples, num_training_samples, trial_number,
                     criterion_name, max_depth, min_num_samples_allowed,
@@ -505,3 +564,26 @@ def save_trial_info(dataset_name, num_total_samples, num_training_samples, trial
                  str(num_nodes_prunned)]
     print(output_split_char.join(line_list), file=output_file_descriptor)
     output_file_descriptor.flush()
+
+
+def save_p_values_info(dataset_name, num_training_samples, trial_number, criterion_name,
+                       num_valid_nominal_attributes, num_monte_carlo_simulations,
+                       curr_p_values, train_dataset, output_split_char,
+                       p_values_output_file_descriptor):
+    """Saves each attribute's p-value and related information."""
+    for (curr_position, split, curr_p_value) in curr_p_values:
+        line_list = [str(datetime.datetime.now()),
+                     dataset_name,
+                     str(num_training_samples),
+                     str(trial_number + 1),
+                     criterion_name,
+                     str(num_valid_nominal_attributes),
+                     str(num_monte_carlo_simulations),
+
+                     train_dataset.attrib_names[split.attrib_index],
+                     str(sum(len(split_values) for split_values in split.splits_values)),
+                     str(curr_position),
+                     str(split.criterion_value),
+                     str(curr_p_value)]
+        print(output_split_char.join(line_list), file=p_values_output_file_descriptor)
+    p_values_output_file_descriptor.flush()
